@@ -16,9 +16,10 @@ This guide covers Tulip's bot extensibility system, which enables bots to create
 4. [Receiving Interactions](#receiving-interactions)
    - [Webhook Payload Format](#webhook-payload-format)
    - [Responding to Interactions](#responding-to-interactions)
-5. [API Reference](#api-reference)
-6. [Security Model](#security-model)
-7. [Complete Examples](#complete-examples)
+5. [Bot Presence](#bot-presence)
+6. [API Reference](#api-reference)
+7. [Security Model](#security-model)
+8. [Complete Examples](#complete-examples)
 
 ---
 
@@ -316,6 +317,31 @@ CSS rules are automatically scoped to your widget to prevent style leaks:
 .widget-freeform-12345 .button { color: red; }
 ```
 
+#### External Dependencies
+
+Freeform widgets can load external JavaScript libraries and CSS frameworks. Dependencies are loaded once and shared across all freeform widgets that request them.
+
+```json
+{
+  "widget_type": "freeform",
+  "extra_data": {
+    "html": "<div id=\"chart\"></div>",
+    "js": "new Chart(container.querySelector('#chart'), { ... });",
+    "dependencies": [
+      {"url": "https://cdn.jsdelivr.net/npm/chart.js", "type": "script"},
+      {"url": "https://example.com/styles.css", "type": "style"}
+    ]
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | Yes | URL to the external resource |
+| `type` | `"script"` or `"style"` | Yes | Type of dependency |
+
+Dependencies are loaded before your widget's JavaScript executes, so you can use libraries like Chart.js, D3, or any other client-side library.
+
 ---
 
 ## Bot Commands
@@ -503,6 +529,53 @@ Return an empty body or `{}` to acknowledge without any visible response.
 
 ---
 
+## Bot Presence
+
+Bots can report their online/offline status, which is displayed to users in the sidebar. This is useful for showing when bots are available to respond.
+
+### How Bot Presence Works
+
+Bot presence is determined automatically based on event queue connections:
+
+1. **Automatic tracking**: When a bot has an active event queue (e.g., connected via long-polling), it's automatically marked as online
+2. **Manual API**: Webhook bots without persistent connections can explicitly update their presence
+
+### Presence API
+
+**POST** `/api/v1/bots/me/presence`
+
+Update the bot's presence status.
+
+```bash
+curl -X POST https://your-tulip.com/api/v1/bots/me/presence \
+  -u bot@example.com:BOT_API_KEY \
+  -d 'is_connected=true'
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `is_connected` | boolean | Yes | `true` for online, `false` for offline |
+
+### Presence Events
+
+When a bot's presence changes, all users in the realm receive a `bot_presence` event:
+
+```json
+{
+  "type": "bot_presence",
+  "bot_id": 123,
+  "is_connected": true,
+  "last_connected_time": 1704793200.0,
+  "server_timestamp": 1704793200.5
+}
+```
+
+### Sidebar Display
+
+Connected bots appear in the "Bots" section of the right sidebar with a green indicator. Disconnected bots show a gray indicator with a tooltip showing when they were last connected.
+
+---
+
 ## API Reference
 
 ### Endpoints
@@ -514,6 +587,7 @@ Return an empty body or `{}` to acknowledge without any visible response.
 | `POST` | `/json/bot_commands/register` | Register a new command (bots only) |
 | `DELETE` | `/json/bot_commands/{command_id}` | Delete a command |
 | `GET` | `/json/bot_commands/{bot_id}/autocomplete` | Fetch dynamic autocomplete |
+| `POST` | `/api/v1/bots/me/presence` | Update bot presence status |
 
 ### Interaction Request
 
