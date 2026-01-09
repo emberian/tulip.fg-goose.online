@@ -36,6 +36,8 @@ type CommandModeState = {
     fields: CommandFieldState[];
     focus: FocusPosition;
     trailing_text: string; // Text after the command invocation
+    // Track which required fields have been visited but left empty
+    visited_empty_required: Set<number>;
 };
 
 // Global state for command mode
@@ -46,17 +48,52 @@ let state: CommandModeState = {
     fields: [],
     focus: {type: "command"},
     trailing_text: "",
+    visited_empty_required: new Set(),
 };
 
 // Event callbacks
 let on_exit_callback: (() => void) | null = null;
 let on_send_callback: ((command_name: string, args: Record<string, string>) => void) | null = null;
 
+// Sending state - prevents edits while request is in flight
+let is_sending = false;
+
 /**
  * Check if command mode is currently active.
  */
 export function is_active(): boolean {
     return state.active;
+}
+
+/**
+ * Check if a command is currently being sent.
+ */
+export function get_is_sending(): boolean {
+    return is_sending;
+}
+
+/**
+ * Set the sending state. When true, inputs are disabled.
+ */
+export function set_sending(sending: boolean): void {
+    is_sending = sending;
+    if (state.active) {
+        update_sending_state();
+    }
+}
+
+/**
+ * Update the UI to reflect the sending state.
+ */
+function update_sending_state(): void {
+    const $container = $(`#${COMMAND_UI_CONTAINER_ID}`);
+    if (is_sending) {
+        $container.addClass("sending");
+        $container.find("input, select").prop("disabled", true);
+    } else {
+        $container.removeClass("sending");
+        $container.find("input, select").prop("disabled", false);
+    }
 }
 
 /**
@@ -131,6 +168,7 @@ export function enter(command: bot_command_store.BotCommand): void {
         })),
         focus: command.options.length > 0 ? {type: "field", index: 0} : {type: "trailing"},
         trailing_text: "",
+        visited_empty_required: new Set(),
     };
 
     render_command_ui();
@@ -147,8 +185,10 @@ export function exit(): void {
         fields: [],
         focus: {type: "command"},
         trailing_text: "",
+        visited_empty_required: new Set(),
     };
 
+    is_sending = false;
     hide_command_ui();
 
     if (on_exit_callback) {
@@ -186,12 +226,31 @@ export function set_trailing_text(value: string): void {
 }
 
 /**
+ * Check if a field is required and empty, and track it if so.
+ * Called when leaving a field.
+ */
+function check_required_field_on_leave(index: number): void {
+    const field = state.fields[index];
+    if (field && field.option.required && !field.value.trim()) {
+        state.visited_empty_required.add(index);
+    } else if (field) {
+        // Field has been filled, remove from visited empty set
+        state.visited_empty_required.delete(index);
+    }
+}
+
+/**
  * Move focus to the next position.
  * Returns true if moved, false if already at the end.
  */
 export function advance_focus(): boolean {
     if (!state.active) {
         return false;
+    }
+
+    // Track if leaving an empty required field
+    if (state.focus.type === "field") {
+        check_required_field_on_leave(state.focus.index);
     }
 
     if (state.focus.type === "command") {
@@ -228,6 +287,11 @@ export function advance_focus(): boolean {
 export function retreat_focus(): boolean {
     if (!state.active) {
         return false;
+    }
+
+    // Track if leaving an empty required field
+    if (state.focus.type === "field") {
+        check_required_field_on_leave(state.focus.index);
     }
 
     if (state.focus.type === "trailing") {
@@ -471,8 +535,9 @@ function build_command_html(): string {
         const is_required = field.option.required;
         const has_value = field.value.trim() !== "";
         const has_choices = field.option.choices && field.option.choices.length > 0;
+        const is_unfilled_required = state.visited_empty_required.has(i);
 
-        html += `<span class="command-field-inline${is_required ? " required" : ""}${has_value ? " has-value" : ""}" data-field-index="${i}">`;
+        html += `<span class="command-field-inline${is_required ? " required" : ""}${has_value ? " has-value" : ""}${is_unfilled_required ? " unfilled-required" : ""}" data-field-index="${i}">`;
 
         if (is_field_focused) {
             const placeholder = field.option.name + (is_required ? "*" : "");
@@ -774,7 +839,9 @@ export function clear_for_testing(): void {
         fields: [],
         focus: {type: "command"},
         trailing_text: "",
+        visited_empty_required: new Set(),
     };
     on_exit_callback = null;
     on_send_callback = null;
+    is_sending = false;
 }

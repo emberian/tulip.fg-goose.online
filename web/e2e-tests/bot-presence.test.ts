@@ -35,10 +35,20 @@ async function test_bot_presence_updates(page: Page): Promise<void> {
     const test_bot_id = bot_ids[0]!;
     console.log(`Testing with bot ID: ${test_bot_id}`);
 
-    // Set bot as connected using our exposed test function
-    await page.evaluate((bot_id: number) => {
-        zulip_test.update_bot_presence(bot_id, true, Date.now() / 1000);
-    }, test_bot_id);
+    // Set bot as connected using the unified presence system
+    // For bots, active_timestamp set = connected, null = disconnected
+    const now = Date.now() / 1000;
+    await page.evaluate(
+        (bot_id: number, timestamp: number) => {
+            zulip_test.update_presence(
+                bot_id,
+                {active_timestamp: timestamp, idle_timestamp: timestamp, is_bot: true},
+                timestamp,
+            );
+        },
+        test_bot_id,
+        now,
+    );
 
     // Trigger a redraw of the buddy list
     await page.evaluate(() => {
@@ -48,8 +58,7 @@ async function test_bot_presence_updates(page: Page): Promise<void> {
     // Wait a moment for the UI to update
     await page.waitForFunction(
         (bot_id: number) => {
-            const info = zulip_test.get_bot_presence_info(bot_id);
-            return info?.is_connected === true;
+            return zulip_test.is_bot_connected(bot_id);
         },
         {},
         test_bot_id,
@@ -62,10 +71,18 @@ async function test_bot_presence_updates(page: Page): Promise<void> {
 
     assert.ok(is_connected, "Bot should be connected after update");
 
-    // Now disconnect the bot
-    await page.evaluate((bot_id: number) => {
-        zulip_test.update_bot_presence(bot_id, false, null);
-    }, test_bot_id);
+    // Now disconnect the bot (set active_timestamp to undefined)
+    await page.evaluate(
+        (bot_id: number, timestamp: number) => {
+            zulip_test.update_presence(
+                bot_id,
+                {active_timestamp: undefined, idle_timestamp: timestamp, is_bot: true},
+                timestamp,
+            );
+        },
+        test_bot_id,
+        now,
+    );
 
     // Trigger a redraw
     await page.evaluate(() => {
@@ -90,11 +107,20 @@ async function test_bot_presence_indicator_classes(page: Page): Promise<void> {
     }
 
     const test_bot_id = bot_ids[0]!;
+    const now = Date.now() / 1000;
 
     // Set bot as connected
-    await page.evaluate((bot_id: number) => {
-        zulip_test.update_bot_presence(bot_id, true, Date.now() / 1000);
-    }, test_bot_id);
+    await page.evaluate(
+        (bot_id: number, timestamp: number) => {
+            zulip_test.update_presence(
+                bot_id,
+                {active_timestamp: timestamp, idle_timestamp: timestamp, is_bot: true},
+                timestamp,
+            );
+        },
+        test_bot_id,
+        now,
+    );
 
     await page.evaluate(() => {
         zulip_test.redraw_buddy_list();
@@ -109,9 +135,17 @@ async function test_bot_presence_indicator_classes(page: Page): Promise<void> {
     assert.equal(circle_class, "user-circle-bot", "Connected bot should have user-circle-bot class");
 
     // Set bot as disconnected
-    await page.evaluate((bot_id: number) => {
-        zulip_test.update_bot_presence(bot_id, false, null);
-    }, test_bot_id);
+    await page.evaluate(
+        (bot_id: number, timestamp: number) => {
+            zulip_test.update_presence(
+                bot_id,
+                {active_timestamp: undefined, idle_timestamp: timestamp, is_bot: true},
+                timestamp,
+            );
+        },
+        test_bot_id,
+        now,
+    );
 
     await page.evaluate(() => {
         zulip_test.redraw_buddy_list();

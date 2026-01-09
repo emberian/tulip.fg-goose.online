@@ -1,4 +1,4 @@
-<div class="widget-command-invocation {{#if is_pending}}command-pending{{/if}} {{#if is_responding}}command-responding{{/if}}">
+<div class="widget-command-invocation {{#if is_pending}}command-pending{{/if}} {{#if is_responding}}command-responding{{/if}} {{#if is_error}}command-error{{/if}}">
     <div class="command-header">
         <span class="command-label">used</span>
         <span class="command-name">/{{command_name}}</span>
@@ -12,6 +12,11 @@
             <span class="responding-dot"></span>
         </span>
         {{/if}}
+        {{#if is_error}}
+        <span class="command-error-indicator">
+            <i class="zulip-icon zulip-icon-warning-triangle"></i>
+        </span>
+        {{/if}}
     </div>
     {{#if has_arguments}}
     <div class="command-arguments">
@@ -22,5 +27,8 @@
         </div>
         {{/each}}
     </div>
+    {{/if}}
+    {{#if is_error}}
+    <div class="command-error-message">{{error_message}}</div>
     {{/if}}
 </div>

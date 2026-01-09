@@ -2300,3 +2300,25 @@ textarea.new_message_textarea {
         transform: translateX(3px);
     }
 }
+
+/* Sending state - disable inputs and show visual feedback */
+.command-compose-container.sending {
+    opacity: 0.7;
+    pointer-events: none;
+
+    input,
+    select {
+        cursor: not-allowed;
+    }
+}
+
+/* Unfilled required field - persistent visual indicator */
+.command-field-inline.unfilled-required .field-placeholder {
+    color: hsl(0deg 70% 50%);
+    border-bottom-color: hsl(0deg 70% 50%);
+}
+
+.command-field-inline.unfilled-required .command-field-input-inline,
+.command-field-inline.unfilled-required .command-field-select-inline {
+    border-bottom-color: hsl(0deg 70% 50%);
+}

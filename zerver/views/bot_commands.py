@@ -4,6 +4,7 @@ import uuid
 from typing import Annotated, Any
 
 import requests
+from django.core.cache import cache
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse
 from django.utils.translation import gettext as _
@@ -322,6 +323,8 @@ def invoke_bot_command(
     topic: str | None = None,
     # For direct messages
     to: Annotated[Json[list[int]], "User IDs for direct message"] = [],
+    # Idempotency key to prevent duplicate submissions
+    idempotency_key: str | None = None,
 ) -> HttpResponse:
     """
     Invoke a bot slash command.
@@ -336,7 +339,16 @@ def invoke_bot_command(
     - stream_id: Stream ID for channel messages
     - topic: Topic name for channel messages
     - to: User IDs for direct messages
+    - idempotency_key: Optional key to prevent duplicate submissions
     """
+    # Check idempotency key to prevent duplicate submissions
+    if idempotency_key:
+        cache_key = f"cmd_idempotency:{user_profile.id}:{idempotency_key}"
+        if cache.get(cache_key):
+            raise JsonableError(_("Command already submitted"))
+        # Set the key with 5 minute TTL - will be confirmed after successful send
+        cache.set(cache_key, "pending", timeout=300)
+
     # Look up the command
     try:
         command = BotCommand.objects.select_related("bot_profile").get(

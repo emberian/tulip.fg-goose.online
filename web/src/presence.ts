@@ -287,7 +287,7 @@ export function set_info(
             server_timestamp,
             active_timestamp: info.active_timestamp,
             idle_timestamp: info.idle_timestamp,
-            is_bot: info.is_bot,
+            ...(info.is_bot !== undefined && {is_bot: info.is_bot}),
         };
 
         raw_info.set(user_id, raw);

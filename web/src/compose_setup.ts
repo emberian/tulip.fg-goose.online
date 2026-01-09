@@ -70,10 +70,14 @@ export function initialize(): void {
         // Get the destination from compose state
         const message_type = compose_state.get_message_type();
 
+        // Generate idempotency key to prevent duplicate submissions
+        const idempotency_key = crypto.randomUUID();
+
         // Build the API request data
         const data: Record<string, string> = {
             command_name,
             arguments: JSON.stringify(args),
+            idempotency_key,
         };
 
         let has_destination = false;
@@ -105,18 +109,21 @@ export function initialize(): void {
             return;
         }
 
-        // Show spinner while sending
+        // Show spinner and disable inputs while sending
         compose_ui.show_compose_spinner();
+        command_compose.set_sending(true);
 
         void channel.post({
             url: "/json/bot_commands/invoke",
             data,
             success(_response) {
                 // Command sent successfully - clear compose box
+                command_compose.set_sending(false);
                 compose.clear_compose_box();
                 compose_ui.hide_compose_spinner();
             },
             error(xhr) {
+                command_compose.set_sending(false);
                 compose_ui.hide_compose_spinner();
                 const response = channel.xhr_error_message("Error invoking command", xhr);
                 compose_banner.show_error_message(

@@ -70,6 +70,41 @@ class BotInteractionWorker(QueueProcessingWorker):
                 "Command invocation for unsupported bot type %s", bot_profile.bot_type
             )
 
+    def _send_command_error_status(
+        self,
+        event: dict[str, Any],
+        bot_profile: UserProfile,
+        error_message: str,
+    ) -> None:
+        """
+        Send an error status update to the command invocation widget.
+
+        This updates the widget to show the user that the bot failed to respond.
+        """
+        import json
+
+        from zerver.actions.submessage import do_add_submessage
+
+        message_id = event.get("message_id")
+        if not message_id:
+            return
+
+        try:
+            submessage_content = json.dumps({
+                "status": "error",
+                "error": error_message,
+            })
+
+            do_add_submessage(
+                realm=bot_profile.realm,
+                sender_id=bot_profile.id,
+                message_id=message_id,
+                msg_type="widget",
+                content=submessage_content,
+            )
+        except Exception as e:
+            logger.warning("Failed to send error status for command: %s", e)
+
     def _handle_outgoing_webhook_command(
         self, event: dict[str, Any], bot_profile: UserProfile
     ) -> None:
@@ -110,24 +145,37 @@ class BotInteractionWorker(QueueProcessingWorker):
                         service.base_url,
                     )
                     self._process_command_response(event, bot_profile, response)
+                    return  # Success - don't try other services
                 else:
                     logger.warning(
                         "Bot %s returned status %s for command",
                         bot_profile.email,
                         response.status_code,
                     )
+                    self._send_command_error_status(
+                        event, bot_profile, f"Bot returned error (status {response.status_code})"
+                    )
+                    return
             except requests.exceptions.Timeout:
                 logger.warning(
                     "Timeout delivering command to bot %s at %s",
                     bot_profile.email,
                     service.base_url,
                 )
+                self._send_command_error_status(
+                    event, bot_profile, "Bot did not respond in time"
+                )
+                return
             except requests.exceptions.RequestException as e:
                 logger.warning(
                     "Error delivering command to bot %s: %s",
                     bot_profile.email,
                     e,
                 )
+                self._send_command_error_status(
+                    event, bot_profile, "Failed to reach bot"
+                )
+                return
 
     def _handle_embedded_bot_command(
         self, event: dict[str, Any], bot_profile: UserProfile
@@ -178,6 +226,10 @@ class BotInteractionWorker(QueueProcessingWorker):
                     bot_profile.email,
                     e,
                 )
+                self._send_command_error_status(
+                    event, bot_profile, "Bot encountered an error"
+                )
+                return
 
     def _process_command_response(
         self,

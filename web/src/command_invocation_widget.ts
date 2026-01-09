@@ -22,7 +22,7 @@ export const command_invocation_extra_data_schema = z.object({
     bot_id: z.number(),
     bot_name: z.string(),
     interaction_id: z.optional(z.string()),
-    status: z.optional(z.enum(["pending", "responding", "complete"])),
+    status: z.optional(z.enum(["pending", "responding", "complete", "error"])),
 });
 
 export function activate({
@@ -49,6 +49,9 @@ export function activate({
     // Track status for the command - starts as pending
     let status = data.status ?? "pending";
 
+    // Track error message if any
+    let error_message = "";
+
     function render(): void {
         // Get bot avatar - use simple path since we just have the bot_id
         const bot_avatar = `/avatar/${data.bot_id}`;
@@ -67,6 +70,8 @@ export function activate({
             has_arguments: formatted_args.length > 0,
             is_pending: status === "pending",
             is_responding: status === "responding",
+            is_error: status === "error",
+            error_message,
         };
 
         const html = render_command_invocation_widget(template_data);
@@ -82,7 +87,11 @@ export function activate({
             if (event_data && typeof event_data === "object") {
                 // Check for status update
                 if ("status" in event_data && typeof event_data.status === "string") {
-                    status = event_data.status as "pending" | "responding" | "complete";
+                    status = event_data.status as "pending" | "responding" | "complete" | "error";
+                    // Capture error message if present
+                    if ("error" in event_data && typeof event_data.error === "string") {
+                        error_message = event_data.error;
+                    }
                     render();
                 }
             }

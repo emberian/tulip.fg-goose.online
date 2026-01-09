@@ -19,6 +19,10 @@ export {page_load_time} from "./setup.ts";
 export {current_user, realm} from "./state_data.ts";
 export {add_user_id_to_new_stream} from "./stream_create_subscribers.ts";
 export {get as get_message} from "./message_store.ts";
-export {is_bot_connected} from "./presence.ts";
+export {
+    is_bot_connected,
+    update_info_from_event as update_presence,
+    presence_info,
+} from "./presence.ts";
 export {redraw as redraw_buddy_list} from "./activity_ui.ts";
 export {get_user_circle_class} from "./buddy_data.ts";

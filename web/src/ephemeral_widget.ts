@@ -29,7 +29,7 @@ const dismissed_ephemeral_ids = new Set<number>();
  * Check if a submessage is an ephemeral response that should be rendered.
  */
 export function is_ephemeral_submessage(submessage: {
-    visible_to?: number[] | null;
+    visible_to?: number[] | null | undefined;
     content: string;
 }): boolean {
     // Must have visibility restriction
@@ -88,13 +88,13 @@ export function render_ephemeral_responses(
             const data = result.data;
 
             // Determine visibility text
-            const visible_to = submessage.visible_to ?? [];
+            const visible_to = submessage["visible_to"] ?? [];
             let visibility_text: string;
             if (visible_to.length === 1) {
                 visibility_text = "Only visible to you";
             } else {
                 const visible_names = visible_to
-                    .map((id) => {
+                    .map((id: number) => {
                         const person = people.maybe_get_user_by_id(id);
                         return person?.full_name ?? `User ${id}`;
                     })

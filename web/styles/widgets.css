@@ -774,6 +774,25 @@ input {
             transform: scale(1.2);
         }
     }
+
+    /* Error state */
+    &.command-error {
+        border-left: 3px solid hsl(0deg 70% 50%);
+    }
+
+    .command-error-indicator {
+        margin-left: 8px;
+        color: hsl(0deg 70% 50%);
+    }
+
+    .command-error-message {
+        margin-top: 6px;
+        padding: 4px 8px;
+        font-size: 0.85em;
+        color: hsl(0deg 70% 40%);
+        background-color: hsl(0deg 70% 95%);
+        border-radius: 3px;
+    }
 }
 
 /* Ephemeral/private response styling */
