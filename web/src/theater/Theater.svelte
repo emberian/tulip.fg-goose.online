@@ -163,6 +163,10 @@
 
     function handleSceneChange(event: CustomEvent<{streamId: number; topic: string}>) {
         navigation.setCurrentScene(event.detail.streamId, event.detail.topic);
+        // Close sidebar on mobile after selecting a scene
+        if (typeof window !== "undefined" && window.innerWidth < 768) {
+            sidebarCollapsed = true;
+        }
     }
 
     function toggleSidebar() {
@@ -184,16 +188,28 @@
     </div>
 {/if}
 
-<div class="theater" class:sidebar-collapsed={sidebarCollapsed}>
-    <!-- Mobile sidebar backdrop -->
-    {#if !sidebarCollapsed}
-        <button
-            class="sidebar-backdrop"
-            onclick={toggleSidebar}
-            aria-label="Close sidebar"
-            type="button"
-        ></button>
-    {/if}
+<div class="theater" class:sidebar-collapsed={sidebarCollapsed} class:sidebar-open={!sidebarCollapsed}>
+    <!-- Mobile-only: hamburger button (visible when sidebar closed) -->
+    <button
+        class="mobile-menu-btn"
+        onclick={toggleSidebar}
+        aria-label="Open menu"
+        type="button"
+    >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+    </button>
+
+    <!-- Mobile-only: backdrop when sidebar open -->
+    <button
+        class="sidebar-backdrop"
+        class:visible={!sidebarCollapsed}
+        onclick={toggleSidebar}
+        aria-label="Close sidebar"
+        type="button"
+        tabindex="-1"
+    ></button>
 
     <aside class="theater-sidebar" aria-label="Theater sidebar">
         <div class="sidebar-header">
@@ -205,25 +221,41 @@
                 </a>
                 <h1 class="theater-title">Theater</h1>
             </div>
+            <!-- Desktop: chevron collapse/expand button -->
             <button
-                class="collapse-btn"
+                class="collapse-btn desktop-only"
                 onclick={toggleSidebar}
-                aria-label={sidebarCollapsed ? "Open menu" : "Close menu"}
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 aria-expanded={!sidebarCollapsed}
             >
-                {#if sidebarCollapsed}
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path d="M3 12h18M3 6h18M3 18h18"/>
-                    </svg>
-                {:else}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                {/if}
+                <span aria-hidden="true">{sidebarCollapsed ? "›" : "‹"}</span>
+            </button>
+            <!-- Mobile: close button -->
+            <button
+                class="close-btn mobile-only"
+                onclick={toggleSidebar}
+                aria-label="Close menu"
+                type="button"
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
             </button>
         </div>
 
-        {#if !sidebarCollapsed}
+        <!-- Desktop: expand button shown when collapsed -->
+        <button
+            class="expand-btn desktop-only"
+            onclick={toggleSidebar}
+            aria-label="Expand sidebar"
+            type="button"
+        >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M9 18l6-6-6-6"/>
+            </svg>
+        </button>
+
+        <div class="sidebar-content">
             <SceneSelector
                 streams={$navigation.streams}
                 selectedStreamId={$navigation.currentStreamId}
@@ -231,7 +263,7 @@
                 on:sceneChange={handleSceneChange}
             />
             <CastList members={$presence} />
-        {/if}
+        </div>
     </aside>
 
     <main class="theater-stage" id="theater-stage-content" aria-label="Stage area">
@@ -257,6 +289,7 @@
 </div>
 
 <style>
+    /* ===== BASE LAYOUT (Desktop) ===== */
     .theater {
         display: grid;
         grid-template-columns: 280px 1fr;
@@ -269,6 +302,7 @@
         grid-template-columns: 48px 1fr;
     }
 
+    /* ===== SIDEBAR ===== */
     .theater-sidebar {
         background: var(--theater-sidebar-bg);
         border-right: 1px solid var(--theater-border);
@@ -283,23 +317,26 @@
         justify-content: space-between;
         padding: 1rem;
         border-bottom: 1px solid var(--theater-border);
+        flex-shrink: 0;
     }
 
     .header-left {
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        min-width: 0;
     }
 
     .back-link {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         border-radius: 6px;
         color: var(--theater-muted);
         transition: all var(--theater-transition-fast);
+        flex-shrink: 0;
     }
 
     .back-link:hover {
@@ -314,27 +351,95 @@
         font-family: var(--theater-font-ui);
     }
 
-    .sidebar-collapsed .header-left {
-        justify-content: center;
+    .sidebar-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
     }
 
+    /* Desktop collapsed state */
     .sidebar-collapsed .theater-title {
         display: none;
     }
 
+    .sidebar-collapsed .sidebar-content {
+        display: none;
+    }
+
+    .sidebar-collapsed .header-left {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .sidebar-collapsed .collapse-btn {
+        display: none;
+    }
+
+    .sidebar-collapsed .sidebar-header {
+        justify-content: center;
+        padding: 1rem 0.5rem;
+    }
+
+    /* ===== EXPAND BUTTON (Desktop only, when collapsed) ===== */
+    .expand-btn {
+        display: none;
+    }
+
+    .sidebar-collapsed .expand-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin: 0.5rem auto;
+        background: none;
+        border: 1px solid var(--theater-border);
+        border-radius: 6px;
+        color: var(--theater-muted);
+        cursor: pointer;
+        transition: all var(--theater-transition-fast);
+    }
+
+    .sidebar-collapsed .expand-btn:hover {
+        color: var(--theater-text);
+        background: var(--theater-bg-elevated);
+        border-color: var(--theater-accent);
+    }
+
+    /* ===== COLLAPSE BUTTON (Desktop only) ===== */
     .collapse-btn {
         background: none;
         border: none;
         color: var(--theater-muted);
         cursor: pointer;
-        font-size: 1rem;
+        font-size: 1.25rem;
         padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        transition: all var(--theater-transition-fast);
     }
 
     .collapse-btn:hover {
         color: var(--theater-text);
+        background: var(--theater-bg-elevated);
     }
 
+    /* ===== MOBILE MENU BUTTON (hidden on desktop) ===== */
+    .mobile-menu-btn {
+        display: none;
+    }
+
+    /* ===== CLOSE BUTTON (Mobile only, hidden on desktop) ===== */
+    .close-btn {
+        display: none;
+    }
+
+    /* ===== SIDEBAR BACKDROP (hidden on desktop) ===== */
+    .sidebar-backdrop {
+        display: none;
+    }
+
+    /* ===== STAGE ===== */
     .theater-stage {
         display: flex;
         flex-direction: column;
@@ -367,7 +472,7 @@
         font-style: italic;
     }
 
-    /* Persona error banner */
+    /* ===== PERSONA ERROR BANNER ===== */
     .persona-error-banner {
         position: fixed;
         top: 0;
@@ -381,7 +486,7 @@
         color: white;
         font-family: var(--theater-font-ui);
         font-size: 0.9rem;
-        z-index: 100;
+        z-index: 200;
     }
 
     .banner-actions {
@@ -420,83 +525,153 @@
         opacity: 1;
     }
 
-    /* Sidebar backdrop - hidden on desktop */
-    .sidebar-backdrop {
-        display: none;
-    }
-
-    /* Mobile responsiveness */
+    /* ===== MOBILE STYLES ===== */
     @media (max-width: 768px) {
+        /* Grid is always single column on mobile */
         .theater {
             grid-template-columns: 1fr;
-        }
-
-        .sidebar-backdrop {
-            display: block;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 98;
-            border: none;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .theater-sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: min(280px, 85vw);
-            z-index: 99;
-            transform: translateX(-100%);
-            transition: transform var(--theater-transition-normal);
-        }
-
-        .theater:not(.sidebar-collapsed) .theater-sidebar {
-            transform: translateX(0);
         }
 
         .theater.sidebar-collapsed {
             grid-template-columns: 1fr;
         }
 
-        .theater.sidebar-collapsed .sidebar-backdrop {
-            display: none;
-        }
-
-        /* Mobile hamburger button - always visible when collapsed */
-        .collapse-btn {
-            position: fixed;
-            top: 0.75rem;
-            left: 0.75rem;
-            z-index: 40;
-            background: var(--theater-bg-elevated);
-            border: 1px solid var(--theater-border);
-            border-radius: 8px;
-            padding: 0.6rem 0.75rem;
-            min-width: 44px;
-            min-height: 44px;
+        /* Mobile menu button - fixed position, visible when sidebar closed */
+        .mobile-menu-btn {
             display: flex;
             align-items: center;
             justify-content: center;
+            position: fixed;
+            top: 0.75rem;
+            left: 0.75rem;
+            z-index: 50;
+            width: 44px;
+            height: 44px;
+            background: var(--theater-bg-elevated);
+            border: 1px solid var(--theater-border);
+            border-radius: 8px;
+            color: var(--theater-text);
+            cursor: pointer;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* When sidebar open, move collapse btn inside sidebar header */
-        .theater:not(.sidebar-collapsed) .collapse-btn {
-            position: static;
-            box-shadow: none;
+        .mobile-menu-btn:active {
+            background: var(--theater-bg);
+        }
+
+        /* Hide hamburger when sidebar is open */
+        .theater.sidebar-open .mobile-menu-btn {
+            display: none;
+        }
+
+        /* Backdrop - covers content when sidebar open */
+        .sidebar-backdrop {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0);
+            z-index: 90;
+            border: none;
+            cursor: pointer;
+            pointer-events: none;
+            transition: background var(--theater-transition-normal);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .sidebar-backdrop.visible {
+            background: rgba(0, 0, 0, 0.6);
+            pointer-events: auto;
+        }
+
+        /* Sidebar as drawer on mobile */
+        .theater-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: min(300px, 85vw);
+            z-index: 100;
+            transform: translateX(-100%);
+            transition: transform var(--theater-transition-normal);
+        }
+
+        .theater.sidebar-open .theater-sidebar {
+            transform: translateX(0);
+        }
+
+        /* Always show sidebar content on mobile (visibility controlled by transform) */
+        .theater .sidebar-content {
+            display: flex;
+        }
+
+        .theater .theater-title {
+            display: block;
+        }
+
+        .theater .header-left {
+            width: auto;
+            justify-content: flex-start;
+        }
+
+        .theater .sidebar-header {
+            justify-content: space-between;
+            padding: 1rem;
+        }
+
+        /* Hide desktop collapse/expand buttons on mobile */
+        .collapse-btn.desktop-only,
+        .expand-btn.desktop-only {
+            display: none !important;
+        }
+
+        /* Show mobile close button */
+        .close-btn.mobile-only {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
             background: none;
             border: none;
-            padding: 0.25rem 0.5rem;
-            min-width: auto;
-            min-height: auto;
+            color: var(--theater-muted);
+            cursor: pointer;
+            border-radius: 8px;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Add padding to stage when hamburger btn is visible */
-        .theater.sidebar-collapsed .theater-stage {
-            padding-top: 3.5rem;
+        .close-btn.mobile-only:hover {
+            color: var(--theater-text);
+            background: var(--theater-bg-elevated);
+        }
+
+        /* Stage needs top padding for the hamburger button */
+        .theater-stage {
+            padding-top: 60px;
+        }
+
+        /* When sidebar is open, no need for extra padding */
+        .theater.sidebar-open .theater-stage {
+            padding-top: 0;
+        }
+    }
+
+    /* Utility classes */
+    .desktop-only {
+        /* Visible by default, hidden in mobile media query */
+    }
+
+    .mobile-only {
+        display: none;
+    }
+
+    @media (max-width: 768px) {
+        .desktop-only {
+            display: none !important;
+        }
+
+        .mobile-only {
+            display: flex;
         }
     }
 </style>

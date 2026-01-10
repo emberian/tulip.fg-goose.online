@@ -349,4 +349,40 @@
         background: var(--theater-border);
         margin: 0.25rem 0;
     }
+
+    /* Mobile optimizations - compact toggle, full dropdown */
+    @media (max-width: 768px) {
+        .picker-toggle {
+            padding: 0.4rem;
+            border-radius: 50%;
+            min-width: 44px;
+            min-height: 44px;
+            justify-content: center;
+        }
+
+        .persona-name,
+        .picker-caret {
+            display: none;
+        }
+
+        .persona-avatar,
+        .persona-avatar-placeholder {
+            width: 32px;
+            height: 32px;
+        }
+
+        .persona-avatar-placeholder {
+            font-size: 0.7rem;
+        }
+
+        /* Show user icon when speaking as self */
+        .picker-toggle:has(.persona-name.self) {
+            background: var(--theater-bg);
+        }
+
+        .picker-dropdown {
+            min-width: 200px;
+            max-width: calc(100vw - 2rem);
+        }
+    }
 </style>

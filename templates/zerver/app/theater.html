@@ -6,8 +6,8 @@
 {% endblock %}
 
 {% block meta_viewport %}
-<!-- WCAG 1.4.4: Allow user zooming up to 500% -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- WCAG 1.4.4: Allow user zooming up to 500%, viewport-fit=cover for safe areas on notched devices -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 {% endblock %}
 
 {% block customhead %}

@@ -51,4 +51,19 @@
     /* Transitions */
     --theater-transition-fast: 150ms ease;
     --theater-transition-normal: 250ms ease;
+
+    /* Safe area insets for notched devices */
+    --theater-safe-area-top: env(safe-area-inset-top, 0px);
+    --theater-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --theater-safe-area-left: env(safe-area-inset-left, 0px);
+    --theater-safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+/* Mobile-specific variable overrides */
+@media (max-width: 768px) {
+    :root {
+        --theater-portrait-size: 48px;
+        --theater-portrait-size-small: 32px;
+        --theater-message-gap: 0.5rem;
+    }
 }

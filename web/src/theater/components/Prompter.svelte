@@ -186,7 +186,9 @@
 
 <style>
     .prompter {
-        padding: 1rem 1.5rem 1.25rem;
+        padding: 1rem 1.5rem calc(1.25rem + var(--theater-safe-area-bottom, 0px));
+        padding-left: calc(1.5rem + var(--theater-safe-area-left, 0px));
+        padding-right: calc(1.5rem + var(--theater-safe-area-right, 0px));
         background: var(--theater-bg-elevated);
         border-top: 1px solid var(--theater-border);
     }
@@ -365,7 +367,9 @@
     /* Mobile optimizations */
     @media (max-width: 768px) {
         .prompter {
-            padding: 0.75rem 1rem 1rem;
+            padding: 0.75rem 1rem calc(1rem + var(--theater-safe-area-bottom, 0px));
+            padding-left: calc(1rem + var(--theater-safe-area-left, 0px));
+            padding-right: calc(1rem + var(--theater-safe-area-right, 0px));
         }
 
         .prompter-row {

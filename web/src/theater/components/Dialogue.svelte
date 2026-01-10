@@ -197,4 +197,45 @@
     .dialogue:hover .timestamp {
         opacity: 1;
     }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        .dialogue {
+            padding: 0.75rem 1rem;
+        }
+
+        .dialogue-header {
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .character-portrait,
+        .character-portrait-placeholder {
+            width: 48px;
+            height: 48px;
+        }
+
+        .character-portrait-placeholder {
+            font-size: 1rem;
+        }
+
+        .speaker-tag {
+            font-size: 1rem;
+        }
+
+        .dialogue-content {
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        /* Always show timestamp on mobile (no hover) */
+        .timestamp {
+            opacity: 0.6;
+            font-size: 0.75rem;
+        }
+
+        .whisper-badge {
+            font-size: 0.7rem;
+        }
+    }
 </style>
