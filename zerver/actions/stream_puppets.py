@@ -137,6 +137,13 @@ def get_all_user_handled_puppet_ids(user: UserProfile) -> list[int]:
 
     Used for whisper visibility filtering in narrow queries where stream
     context is not available.
+
+    TODO:FUTUREWORK: This function is called for every narrow query that
+    needs to filter whispers by visibility. For users who handle many puppets
+    across multiple streams, this could add latency. Consider caching the
+    result (e.g., in memcached with a short TTL, invalidated when puppet
+    handlers change) or pre-computing and storing handled puppet IDs on the
+    UserProfile model for heavy users.
     """
     now = timezone_now()
     puppet_ids: list[int] = []
@@ -200,3 +207,40 @@ def set_puppet_visibility(
     if recent_handler_window_hours is not None:
         puppet.recent_handler_window_hours = recent_handler_window_hours
     puppet.save(update_fields=["visibility_mode", "recent_handler_window_hours"])
+
+
+def cleanup_stale_handlers(dry_run: bool = False) -> int:
+    """Remove stale 'recent' handlers whose time window has expired.
+
+    For 'open' puppets, handlers are considered stale when their last_used
+    timestamp is older than the puppet's recent_handler_window_hours.
+
+    Claimed handlers are never cleaned up - they persist until explicitly removed.
+
+    Args:
+        dry_run: If True, only count stale handlers without deleting them.
+
+    Returns:
+        The number of stale handlers deleted (or that would be deleted if dry_run).
+    """
+    now = timezone_now()
+    stale_count = 0
+
+    # Get all 'recent' handlers for 'open' puppets
+    handlers = PuppetHandler.objects.filter(
+        handler_type=PuppetHandler.HANDLER_TYPE_RECENT,
+        puppet__visibility_mode=StreamPuppet.VISIBILITY_OPEN,
+    ).select_related("puppet")
+
+    handlers_to_delete = []
+    for handler in handlers:
+        puppet = handler.puppet
+        cutoff = now - timedelta(hours=puppet.recent_handler_window_hours)
+        if handler.last_used < cutoff:
+            handlers_to_delete.append(handler.id)
+            stale_count += 1
+
+    if not dry_run and handlers_to_delete:
+        PuppetHandler.objects.filter(id__in=handlers_to_delete).delete()
+
+    return stale_count

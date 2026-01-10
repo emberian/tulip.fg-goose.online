@@ -833,3 +833,162 @@ class PuppetHandlerAPITest(ZulipTestCase):
         data = orjson.loads(result.content)
         self.assertEqual(len(data["handlers"]), 1)
         self.assertEqual(data["handlers"][0]["user_id"], handler.id)
+
+
+class BotPuppetWhisperEventTest(ZulipTestCase):
+    """Tests for bot service events when puppets are whispered to."""
+
+    def test_bot_receives_puppet_whisper_event(self) -> None:
+        """Test that a bot receives puppet_whisper events when its puppet is whispered to."""
+        from zerver.actions.message_send import get_service_bot_events
+        from zerver.actions.stream_puppets import claim_puppet
+        from zerver.models.streams import StreamPuppet
+
+        sender = self.example_user("hamlet")
+        cordelia = self.example_user("cordelia")
+
+        # Create an embedded bot owned by cordelia
+        bot = self.create_test_bot(
+            short_name="puppet-bot",
+            user_profile=cordelia,
+            bot_type=UserProfile.EMBEDDED_BOT,
+        )
+
+        stream_name = "Verona"
+        self.subscribe(sender, stream_name)
+        self.subscribe(bot, stream_name)
+
+        stream = self.get_stream(stream_name, sender.realm)
+        stream.enable_puppet_mode = True
+        stream.save()
+
+        # Create a puppet and have the bot claim it
+        puppet = StreamPuppet.objects.create(
+            stream=stream,
+            name="Gandalf",
+            created_by=sender,
+            visibility_mode=StreamPuppet.VISIBILITY_CLAIMED,
+        )
+        claim_puppet(puppet, bot)
+
+        # Test get_service_bot_events with puppet whisper
+        event_dict = get_service_bot_events(
+            sender=sender,
+            service_bot_tuples=[
+                (bot.id, bot.bot_type),
+            ],
+            mentioned_user_ids=set(),
+            active_user_ids={bot.id},
+            recipient_type=Recipient.STREAM,
+            puppet_whisper_bot_ids={bot.id},
+            whispered_puppet_ids=[puppet.id],
+        )
+
+        # Bot should receive a puppet_whisper event
+        self.assertIn("embedded_bots", event_dict)
+        self.assertEqual(len(event_dict["embedded_bots"]), 1)
+        event = event_dict["embedded_bots"][0]
+        self.assertEqual(event["trigger"], "puppet_whisper")
+        self.assertEqual(event["user_profile_id"], bot.id)
+        self.assertEqual(event["puppet_ids"], [puppet.id])
+
+    def test_bot_does_not_receive_event_for_unclaimed_puppet(self) -> None:
+        """Test that a bot doesn't receive events for puppets it doesn't handle."""
+        from zerver.actions.message_send import get_service_bot_events
+        from zerver.models.streams import StreamPuppet
+
+        sender = self.example_user("hamlet")
+        cordelia = self.example_user("cordelia")
+
+        # Create an embedded bot owned by cordelia
+        bot = self.create_test_bot(
+            short_name="puppet-bot",
+            user_profile=cordelia,
+            bot_type=UserProfile.EMBEDDED_BOT,
+        )
+
+        stream_name = "Verona"
+        self.subscribe(sender, stream_name)
+        self.subscribe(bot, stream_name)
+
+        stream = self.get_stream(stream_name, sender.realm)
+        stream.enable_puppet_mode = True
+        stream.save()
+
+        # Create a puppet but don't claim it for the bot
+        puppet = StreamPuppet.objects.create(
+            stream=stream,
+            name="Gandalf",
+            created_by=sender,
+            visibility_mode=StreamPuppet.VISIBILITY_CLAIMED,
+        )
+
+        # Test get_service_bot_events - bot is not in puppet_whisper_bot_ids
+        event_dict = get_service_bot_events(
+            sender=sender,
+            service_bot_tuples=[
+                (bot.id, bot.bot_type),
+            ],
+            mentioned_user_ids=set(),
+            active_user_ids={bot.id},
+            recipient_type=Recipient.STREAM,
+            puppet_whisper_bot_ids=set(),  # Empty - no bots handle this puppet
+            whispered_puppet_ids=[puppet.id],
+        )
+
+        # Bot should NOT receive any events
+        self.assert_length(event_dict, 0)
+
+    def test_outgoing_webhook_bot_receives_puppet_whisper_event(self) -> None:
+        """Test that outgoing webhook bots also receive puppet_whisper events."""
+        from zerver.actions.message_send import get_service_bot_events
+        from zerver.actions.stream_puppets import claim_puppet
+        from zerver.models.streams import StreamPuppet
+
+        sender = self.example_user("hamlet")
+        cordelia = self.example_user("cordelia")
+
+        # Create an outgoing webhook bot
+        bot = self.create_test_bot(
+            short_name="webhook-bot",
+            user_profile=cordelia,
+            bot_type=UserProfile.OUTGOING_WEBHOOK_BOT,
+        )
+
+        stream_name = "Verona"
+        self.subscribe(sender, stream_name)
+        self.subscribe(bot, stream_name)
+
+        stream = self.get_stream(stream_name, sender.realm)
+        stream.enable_puppet_mode = True
+        stream.save()
+
+        # Create a puppet and have the bot claim it
+        puppet = StreamPuppet.objects.create(
+            stream=stream,
+            name="Gandalf",
+            created_by=sender,
+            visibility_mode=StreamPuppet.VISIBILITY_CLAIMED,
+        )
+        claim_puppet(puppet, bot)
+
+        # Test get_service_bot_events with puppet whisper
+        event_dict = get_service_bot_events(
+            sender=sender,
+            service_bot_tuples=[
+                (bot.id, bot.bot_type),
+            ],
+            mentioned_user_ids=set(),
+            active_user_ids={bot.id},
+            recipient_type=Recipient.STREAM,
+            puppet_whisper_bot_ids={bot.id},
+            whispered_puppet_ids=[puppet.id],
+        )
+
+        # Bot should receive a puppet_whisper event in outgoing_webhooks queue
+        self.assertIn("outgoing_webhooks", event_dict)
+        self.assertEqual(len(event_dict["outgoing_webhooks"]), 1)
+        event = event_dict["outgoing_webhooks"][0]
+        self.assertEqual(event["trigger"], "puppet_whisper")
+        self.assertEqual(event["user_profile_id"], bot.id)
+        self.assertEqual(event["puppet_ids"], [puppet.id])

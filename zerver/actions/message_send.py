@@ -558,6 +558,8 @@ def get_service_bot_events(
     mentioned_user_ids: set[int],
     active_user_ids: set[int],
     recipient_type: int,
+    puppet_whisper_bot_ids: set[int] | None = None,
+    whispered_puppet_ids: list[int] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     event_dict: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
@@ -592,6 +594,21 @@ def get_service_bot_events(
         # these not-actually-mentioned users here, to help keep this
         # function future-proof.
         if user_profile_id not in mentioned_user_ids and user_profile_id not in active_user_ids:
+            return
+
+        # Puppet whisper triggers - bot handles a puppet that was whispered to
+        if (
+            is_stream
+            and puppet_whisper_bot_ids is not None
+            and user_profile_id in puppet_whisper_bot_ids
+        ):
+            event_dict[queue_name].append(
+                {
+                    "trigger": "puppet_whisper",
+                    "user_profile_id": user_profile_id,
+                    "puppet_ids": whispered_puppet_ids,
+                }
+            )
             return
 
         # Mention triggers, for stream messages
@@ -1036,12 +1053,35 @@ def do_send_messages(
 
         ums.extend(user_messages)
 
+        # Compute puppet whisper bot IDs if there are puppet whispers
+        puppet_whisper_bot_ids: set[int] | None = None
+        whispered_puppet_ids: list[int] | None = None
+        whisper_recipients = send_request.message.whisper_recipients
+        if (
+            whisper_recipients is not None
+            and "puppet_ids" in whisper_recipients
+            and send_request.stream is not None
+        ):
+            whispered_puppet_ids = whisper_recipients["puppet_ids"]
+            if whispered_puppet_ids:
+                from zerver.actions.stream_puppets import get_puppet_handler_user_ids
+
+                # Find which bots handle these puppets
+                handler_ids = get_puppet_handler_user_ids(
+                    whispered_puppet_ids, send_request.stream
+                )
+                # Filter to only bots in service_bot_tuples
+                bot_ids = {bot_id for bot_id, _ in send_request.service_bot_tuples}
+                puppet_whisper_bot_ids = handler_ids & bot_ids
+
         send_request.service_queue_events = get_service_bot_events(
             sender=send_request.message.sender,
             service_bot_tuples=send_request.service_bot_tuples,
             mentioned_user_ids=mentioned_user_ids,
             active_user_ids=send_request.active_user_ids,
             recipient_type=send_request.message.recipient.type,
+            puppet_whisper_bot_ids=puppet_whisper_bot_ids,
+            whispered_puppet_ids=whispered_puppet_ids,
         )
 
     bulk_insert_ums(ums)

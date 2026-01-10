@@ -1,16 +1,22 @@
 import $ from "jquery";
+import assert from "minimalistic-assert";
 import _ from "lodash";
 
+import {Typeahead} from "./bootstrap_typeahead.ts";
+import type {TypeaheadInputElement} from "./bootstrap_typeahead.ts";
 import * as compose_state from "./compose_state.ts";
 import * as input_pill from "./input_pill.ts";
 import type {User} from "./people.ts";
 import * as people from "./people.ts";
-import * as pill_typeahead from "./pill_typeahead.ts";
 import * as stream_puppets from "./stream_puppets.ts";
-import type {CombinedPill, CombinedPillContainer} from "./typeahead_helper.ts";
+import type {StreamPuppet} from "./stream_puppets.ts";
+import type {CombinedPill, CombinedPillContainer, PuppetMention, UserOrMentionPillData} from "./typeahead_helper.ts";
+import * as typeahead_helper from "./typeahead_helper.ts";
+import type {UserGroupPillData} from "./user_group_pill.ts";
 import * as user_group_pill from "./user_group_pill.ts";
 import * as user_groups from "./user_groups.ts";
 import type {UserGroup} from "./user_groups.ts";
+import type {UserPillData} from "./user_pill.ts";
 import * as user_pill from "./user_pill.ts";
 
 // Puppet pill type for whisper recipients
@@ -154,6 +160,22 @@ function get_groups(): UserGroup[] {
     return user_group_pill.filter_taken_groups(groups, widget as unknown as CombinedPillContainer);
 }
 
+function get_puppets(): StreamPuppet[] {
+    if (current_stream_id === undefined) {
+        return [];
+    }
+    const all_puppets = stream_puppets.get_puppets_for_stream(current_stream_id);
+    if (!widget) {
+        return all_puppets;
+    }
+    // Filter out already-added puppets
+    const current_puppet_ids = new Set(get_puppet_ids());
+    return all_puppets.filter((p) => !current_puppet_ids.has(p.id));
+}
+
+// Type for whisper typeahead items (includes puppets)
+type WhisperTypeaheadItem = UserGroupPillData | UserPillData | {type: "puppet"; puppet: PuppetMention};
+
 function update_compose_state(): void {
     if (!widget) {
         return;
@@ -175,21 +197,132 @@ export function initialize({
 }): void {
     widget = initialize_pill();
 
-    // Set up typeahead for users and groups
-    // Cast to CombinedPillContainer since WhisperPill is a superset of CombinedPill
+    // Set up custom typeahead for users, groups, and puppets
     const $pill_container = $("#whisper_recipient").parent();
-    pill_typeahead.set_up_combined(
-        $pill_container.find(".input"),
-        widget as unknown as CombinedPillContainer,
-        {
-            user_source: get_users,
-            user_group_source: get_groups,
-            stream: false,
-            user_group: true,
-            user: true,
-            for_stream_subscribers: false,
+    const $input = $pill_container.find(".input");
+
+    const bootstrap_typeahead_input: TypeaheadInputElement = {
+        $element: $input,
+        type: "contenteditable",
+    };
+
+    new Typeahead(bootstrap_typeahead_input, {
+        dropup: true,
+        helpOnEmptyStrings: true,
+        hideOnEmptyAfterBackspace: true,
+        source(_query: string): WhisperTypeaheadItem[] {
+            const source: WhisperTypeaheadItem[] = [];
+
+            // Add user groups
+            const groups: UserGroupPillData[] = get_groups().map((user_group) => ({
+                type: "user_group" as const,
+                ...user_group,
+            }));
+            source.push(...groups);
+
+            // Add users
+            const users: UserPillData[] = get_users().map((user) => ({
+                type: "user" as const,
+                user,
+            }));
+            source.push(...users);
+
+            // Add puppets (if we have a stream context)
+            const puppets = get_puppets().map((puppet) => ({
+                type: "puppet" as const,
+                puppet: {
+                    id: puppet.id,
+                    name: puppet.name,
+                    avatar_url: puppet.avatar_url,
+                } as PuppetMention,
+            }));
+            source.push(...puppets);
+
+            return source;
         },
-    );
+        item_html(item: WhisperTypeaheadItem, _query: string): string {
+            if (item.type === "user_group") {
+                return typeahead_helper.render_user_group(item);
+            }
+            if (item.type === "puppet") {
+                // Use render_person which handles puppets
+                return typeahead_helper.render_person(item as UserOrMentionPillData);
+            }
+            assert(item.type === "user");
+            return typeahead_helper.render_person(item);
+        },
+        matcher(item: WhisperTypeaheadItem, query: string): boolean {
+            query = query.toLowerCase().replaceAll("\u00A0", " ");
+
+            if (item.type === "user_group") {
+                return typeahead_helper.query_matches_group_name(query, item);
+            }
+
+            if (item.type === "puppet") {
+                return typeahead_helper.query_matches_person(query, item as UserOrMentionPillData);
+            }
+
+            assert(item.type === "user");
+            return typeahead_helper.query_matches_person(query, item);
+        },
+        sorter(matches: WhisperTypeaheadItem[], query: string): WhisperTypeaheadItem[] {
+            const users: UserPillData[] = [];
+            const groups: UserGroupPillData[] = [];
+            const puppets: WhisperTypeaheadItem[] = [];
+
+            for (const match of matches) {
+                if (match.type === "user") {
+                    users.push(match);
+                } else if (match.type === "user_group") {
+                    groups.push(match);
+                } else if (match.type === "puppet") {
+                    puppets.push(match);
+                }
+            }
+
+            // Sort users and groups together, then append puppets
+            const sorted = typeahead_helper.sort_stream_or_group_members_options({
+                users,
+                query,
+                groups,
+                for_stream_subscribers: false,
+            });
+
+            // Sort puppets alphabetically and append them
+            puppets.sort((a, b) => {
+                if (a.type === "puppet" && b.type === "puppet") {
+                    return a.puppet.name.localeCompare(b.puppet.name);
+                }
+                return 0;
+            });
+
+            return [...sorted, ...puppets] as WhisperTypeaheadItem[];
+        },
+        updater(item: WhisperTypeaheadItem, _query: string): undefined {
+            if (!widget) {
+                return undefined;
+            }
+
+            if (item.type === "user_group") {
+                user_group_pill.append_user_group(item, widget as unknown as CombinedPillContainer);
+            } else if (item.type === "puppet") {
+                // Add puppet pill directly
+                widget.appendValidatedData({
+                    type: "puppet",
+                    puppet_id: item.puppet.id,
+                    puppet_name: item.puppet.name,
+                });
+            } else {
+                assert(item.type === "user");
+                user_pill.append_person({
+                    pill_widget: widget as unknown as CombinedPillContainer,
+                    person: item.user,
+                });
+            }
+            return undefined;
+        },
+        stopAdvance: true,
+    });
 
     widget.onPillCreate(() => {
         update_compose_state();
