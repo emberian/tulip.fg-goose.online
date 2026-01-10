@@ -1,0 +1,30 @@
+<tr data-persona-id="{{persona.id}}">
+    <td class="character-info">
+        <span class="character-avatar">
+            {{#if persona.avatar_url}}
+                <img src="{{persona.avatar_url}}" alt="" class="avatar" />
+            {{else}}
+                <span class="avatar-placeholder" {{#if persona.color}}style="background-color: {{persona.color}}"{{/if}}>
+                    {{persona.name_initial}}
+                </span>
+            {{/if}}
+        </span>
+        <span class="character-name" {{#if persona.color}}style="color: {{persona.color}}"{{/if}}>{{persona.name}}</span>
+    </td>
+    <td class="character-bio">
+        {{#if persona.bio}}
+            {{persona.bio}}
+        {{else}}
+            <span class="no-bio">{{t "No bio"}}</span>
+        {{/if}}
+    </td>
+    <td class="character-created">{{persona.date_created_str}}</td>
+    <td class="actions">
+        <button class="button small rounded edit-character-button tippy-zulip-tooltip" data-tippy-content="{{t 'Edit'}}">
+            <i class="fa fa-pencil" aria-hidden="true"></i>
+        </button>
+        <button class="button small rounded sea-green delete-character-button tippy-zulip-tooltip" data-tippy-content="{{t 'Delete'}}">
+            <i class="fa fa-trash-o" aria-hidden="true"></i>
+        </button>
+    </td>
+</tr>

@@ -120,6 +120,20 @@ class AbstractMessage(models.Model):
     puppet_display_name = models.CharField(max_length=100, null=True, default=None)
     puppet_avatar_url = models.URLField(max_length=500, null=True, default=None)
 
+    # Persona identity - user-owned character that overrides sender display.
+    # Unlike puppets (bot-controlled, stream-scoped), personas are personal and portable.
+    # The persona FK allows lookups; denormalized fields are snapshot at send time.
+    persona = models.ForeignKey(
+        "zerver.UserPersona",
+        null=True,
+        default=None,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    persona_display_name = models.CharField(max_length=100, null=True, default=None)
+    persona_avatar_url = models.URLField(max_length=500, null=True, default=None)
+    persona_color = models.CharField(max_length=10, null=True, default=None)
+
     # Whisper visibility - if set, message is only visible to specified users/groups.
     # Structure: {"user_ids": [int], "group_ids": [int]} or None for public messages.
     # Group memberships are resolved dynamically at query time, so adding a user to

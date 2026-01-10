@@ -25,6 +25,8 @@ type SendMessageData = {
     whisper_to_user_ids?: string;
     whisper_to_group_ids?: string;
     whisper_to_puppet_ids?: string;
+    // Persona ID for posting as a character
+    persona_id?: number | undefined;
 } & (
     | {
           type: "stream";

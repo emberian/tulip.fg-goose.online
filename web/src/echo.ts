@@ -261,6 +261,7 @@ export function insert_local_message(
     const topic = message_request.topic;
 
     // Parse whisper recipients from the message request if present
+    const number_array_schema = z.array(z.number());
     let whisper_recipients:
         | {user_ids?: number[]; group_ids?: number[]; puppet_ids?: number[]}
         | undefined;
@@ -271,19 +272,19 @@ export function insert_local_message(
     ) {
         whisper_recipients = {};
         if (message_request.whisper_to_user_ids) {
-            whisper_recipients.user_ids = JSON.parse(
-                message_request.whisper_to_user_ids,
-            ) as number[];
+            whisper_recipients.user_ids = number_array_schema.parse(
+                JSON.parse(message_request.whisper_to_user_ids),
+            );
         }
         if (message_request.whisper_to_group_ids) {
-            whisper_recipients.group_ids = JSON.parse(
-                message_request.whisper_to_group_ids,
-            ) as number[];
+            whisper_recipients.group_ids = number_array_schema.parse(
+                JSON.parse(message_request.whisper_to_group_ids),
+            );
         }
         if (message_request.whisper_to_puppet_ids) {
-            whisper_recipients.puppet_ids = JSON.parse(
-                message_request.whisper_to_puppet_ids,
-            ) as number[];
+            whisper_recipients.puppet_ids = number_array_schema.parse(
+                JSON.parse(message_request.whisper_to_puppet_ids),
+            );
         }
     }
 

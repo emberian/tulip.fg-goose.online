@@ -1,0 +1,28 @@
+<div id="my-characters-settings" class="settings-section" data-name="my-characters">
+    <div class="settings_panel_list_header">
+        <h3>{{t "My characters"}}</h3>
+        <button class="button rounded sea-green" id="add-new-character-button">
+            {{t "Add character"}}
+        </button>
+    </div>
+    <p class="settings-subsection-description">
+        {{t "Characters (personas) are alternate identities you can use when posting messages. When you post as a character, your message displays their name and avatar instead of yours. Other users can @mention your character to notify you."}}
+    </p>
+    <div class="progressive-table-wrapper" data-simplebar data-simplebar-tab-index="-1">
+        <table class="table table-striped wrapped-table">
+            <thead class="table-sticky-headers">
+                <tr>
+                    <th data-sort="alphabetic" data-sort-prop="name">{{t "Character" }}
+                        <i class="table-sortable-arrow zulip-icon zulip-icon-sort-arrow-down"></i>
+                    </th>
+                    <th>{{t "Bio" }}</th>
+                    <th data-sort="numeric" data-sort-prop="date_created">{{t "Created" }}
+                        <i class="table-sortable-arrow zulip-icon zulip-icon-sort-arrow-down"></i>
+                    </th>
+                    <th class="actions">{{t "Actions" }}</th>
+                </tr>
+            </thead>
+            <tbody id="my_characters_table" data-empty="{{t 'You have not created any characters yet.'}}" data-search-results-empty="{{t 'No characters match your current filter.' }}"></tbody>
+        </table>
+    </div>
+</div>

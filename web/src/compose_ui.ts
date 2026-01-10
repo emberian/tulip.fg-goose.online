@@ -17,6 +17,7 @@ import type {Typeahead} from "./bootstrap_typeahead.ts";
 import * as bulleted_numbered_list_util from "./bulleted_numbered_list_util.ts";
 import * as channel from "./channel.ts";
 import * as common from "./common.ts";
+import * as compose_persona from "./compose_persona.ts";
 import * as compose_state from "./compose_state.ts";
 import type {TypeaheadSuggestion} from "./composebox_typeahead.ts";
 import {$t, $t_html} from "./i18n.ts";
@@ -608,6 +609,12 @@ export function handle_keydown(
     if (type && isCmdOrCtrl) {
         format_text($textarea, type);
         autosize_textarea($textarea);
+        event.preventDefault();
+    }
+
+    // Ctrl/Cmd + Shift + P: Cycle through personas
+    if (key === "p" && event.shiftKey && isCmdOrCtrl) {
+        compose_persona.cycle_persona();
         event.preventDefault();
     }
 }

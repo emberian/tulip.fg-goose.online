@@ -37,7 +37,8 @@ import * as util from "./util.ts";
 export type UserOrMention =
     | {type: "broadcast"; user: PseudoMentionUser}
     | {type: "user"; user: User}
-    | {type: "puppet"; puppet: PuppetMention};
+    | {type: "puppet"; puppet: PuppetMention}
+    | {type: "persona"; persona: PersonaMention};
 export type UserOrMentionPillData = UserOrMention & {
     is_silent?: boolean;
 };
@@ -47,6 +48,16 @@ export type PuppetMention = {
     id: number;
     name: string;
     avatar_url: string | null;
+};
+
+// Persona mention for user-owned characters
+export type PersonaMention = {
+    id: number;
+    name: string;
+    avatar_url: string | null;
+    color: string | null;
+    user_id: number;
+    user_full_name: string;
 };
 
 export type CombinedPill = StreamPill | UserGroupPill | UserPill;
@@ -121,6 +132,19 @@ export let render_person = (person: UserPillData | UserOrMentionPillData): strin
             puppet_args.img_src = person.puppet.avatar_url;
         }
         return render_typeahead_item(puppet_args);
+    }
+    if (person.type === "persona") {
+        // Render persona mention (user-owned character)
+        const persona_args: Parameters<typeof render_typeahead_item>[0] = {
+            primary: person.persona.name,
+            is_person: true,
+            secondary: person.persona.user_full_name,
+            user_color: person.persona.color,
+        };
+        if (person.persona.avatar_url) {
+            persona_args.img_src = person.persona.avatar_url;
+        }
+        return render_typeahead_item(persona_args);
     }
     const user_circle_class = buddy_data.get_user_circle_class(person.user.user_id);
 
@@ -300,6 +324,17 @@ export function compare_people_for_relevance(
         return -1; // Real users before puppets
     }
 
+    // Handle persona mentions - sort after users but before puppets
+    if (person_a.type === "persona") {
+        if (person_b.type === "persona") {
+            // Sort personas alphabetically by name
+            return person_a.persona.name.localeCompare(person_b.persona.name);
+        }
+        return 1; // Personas after real users
+    } else if (person_b.type === "persona") {
+        return -1; // Real users before personas
+    }
+
     // Now handle actual people users.
     // give preference to subscribed users first
     if (current_stream_id !== undefined) {
@@ -469,18 +504,21 @@ export function sort_languages(matches: LanguageSuggestion[], query: string): La
     }));
 }
 
-// Helper to get display name for a person (user or puppet)
+// Helper to get display name for a person (user, puppet, or persona)
 function get_person_name(p: UserOrMentionPillData | UserPillData): string {
     if (p.type === "puppet") {
         return p.puppet.name;
     }
+    if (p.type === "persona") {
+        return p.persona.name;
+    }
     return p.user.full_name;
 }
 
-// Helper to get email for a person (puppets have no email)
+// Helper to get email for a person (puppets and personas have no email)
 function get_person_email(p: UserOrMentionPillData | UserPillData): string {
-    if (p.type === "puppet") {
-        return ""; // Puppets have no email
+    if (p.type === "puppet" || p.type === "persona") {
+        return ""; // Puppets and personas have no email
     }
     return p.user.email;
 }
@@ -545,8 +583,8 @@ export let sort_recipients = <UserType extends UserOrMentionPillData | UserPillD
     }
 
     function is_bot(user: UserType): boolean {
-        // broadcasts and puppets are not bots by definition.
-        if (user.type === "broadcast" || user.type === "puppet") {
+        // broadcasts, puppets, and personas are not bots by definition.
+        if (user.type === "broadcast" || user.type === "puppet" || user.type === "persona") {
             return false;
         }
         return user.user.is_bot;

@@ -749,6 +749,19 @@ def build_message_send_dict(
         members = mention_data.get_group_members(group_id)
         rendering_result.mentions_user_ids.update(members)
 
+    # For persona mentions, add the persona owner to the mentioned users
+    # so they receive notifications
+    if rendering_result.mentions_persona_ids:
+        from zerver.models.personas import UserPersona
+
+        persona_owner_ids = set(
+            UserPersona.objects.filter(
+                id__in=rendering_result.mentions_persona_ids,
+                is_active=True,
+            ).values_list("user_id", flat=True)
+        )
+        rendering_result.mentions_user_ids.update(persona_owner_ids)
+
     # Only send data to Tornado about stream or topic wildcard mentions if message
     # rendering determined the message had an actual stream or topic wildcard
     # mention in it (and not e.g. stream or topic wildcard mention syntax inside a
@@ -1546,6 +1559,7 @@ def check_send_message(
     puppet_display_name: str | None = None,
     puppet_avatar_url: str | None = None,
     puppet_color: str | None = None,
+    persona_id: int | None = None,
     whisper_to_user_ids: list[int] | None = None,
     whisper_to_group_ids: list[int] | None = None,
     whisper_to_puppet_ids: list[int] | None = None,
@@ -1567,6 +1581,7 @@ def check_send_message(
         puppet_display_name=puppet_display_name,
         puppet_avatar_url=puppet_avatar_url,
         puppet_color=puppet_color,
+        persona_id=persona_id,
         whisper_to_user_ids=whisper_to_user_ids,
         whisper_to_group_ids=whisper_to_group_ids,
         whisper_to_puppet_ids=whisper_to_puppet_ids,
@@ -1851,6 +1866,7 @@ def check_message(
     puppet_display_name: str | None = None,
     puppet_avatar_url: str | None = None,
     puppet_color: str | None = None,
+    persona_id: int | None = None,
     whisper_to_user_ids: list[int] | None = None,
     whisper_to_group_ids: list[int] | None = None,
     whisper_to_puppet_ids: list[int] | None = None,
@@ -1985,6 +2001,25 @@ def check_message(
     # Set puppet identity if provided (already validated above)
     message.puppet_display_name = puppet_display_name
     message.puppet_avatar_url = puppet_avatar_url
+
+    # Set persona identity if provided
+    if persona_id is not None:
+        from zerver.models.personas import UserPersona
+
+        try:
+            persona = UserPersona.objects.get(id=persona_id, user=sender, is_active=True)
+        except UserPersona.DoesNotExist:
+            raise JsonableError(_("Invalid persona ID"))
+
+        # Cannot use both puppet and persona
+        if puppet_display_name is not None:
+            raise JsonableError(_("Cannot use both puppet and persona identity"))
+
+        # Set persona fields (denormalized for display)
+        message.persona = persona
+        message.persona_display_name = persona.name
+        message.persona_avatar_url = persona.avatar_url
+        message.persona_color = persona.color
 
     # Set whisper recipients if provided
     if (

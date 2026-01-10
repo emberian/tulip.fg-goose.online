@@ -2,7 +2,8 @@ import orjson
 
 from zerver.actions.user_groups import bulk_add_members_to_user_groups, check_add_user_group
 from zerver.lib.test_classes import ZulipTestCase
-from zerver.models import Message, UserMessage
+from zerver.models import Message, Recipient, UserMessage, UserProfile
+from zerver.models.streams import get_stream
 
 
 class WhisperMessageTest(ZulipTestCase):
@@ -197,7 +198,7 @@ class WhisperMessageTest(ZulipTestCase):
         message_id = orjson.loads(result.content)["id"]
 
         message = Message.objects.get(id=message_id)
-        self.assertIsNotNone(message.whisper_recipients)
+        assert message.whisper_recipients is not None
         self.assertIn("user_ids", message.whisper_recipients)
         self.assertEqual(message.whisper_recipients["user_ids"], [recipient.id])
 
@@ -339,8 +340,16 @@ class WhisperAccessTest(ZulipTestCase):
         self.assert_json_success(result)
         messages = orjson.loads(result.content)["messages"]
         message_ids = [m["id"] for m in messages]
-        self.assertIn(public_message_id, message_ids, f"Public message {public_message_id} not in {message_ids}")
-        self.assertIn(whisper_message_id, message_ids, f"Whisper message {whisper_message_id} not in {message_ids}")
+        self.assertIn(
+            public_message_id,
+            message_ids,
+            f"Public message {public_message_id} not in {message_ids}",
+        )
+        self.assertIn(
+            whisper_message_id,
+            message_ids,
+            f"Whisper message {whisper_message_id} not in {message_ids}",
+        )
 
         # Recipient should see both messages
         self.login_user(recipient)
@@ -420,7 +429,7 @@ class WhisperToPuppetTest(ZulipTestCase):
     def test_send_whisper_to_puppet_with_claimed_handler(self) -> None:
         """Test that whisper to puppet reaches claimed handler."""
         from zerver.actions.stream_puppets import claim_puppet
-        from zerver.models.streams import PuppetHandler, StreamPuppet
+        from zerver.models.streams import StreamPuppet
 
         sender = self.example_user("hamlet")
         handler = self.example_user("cordelia")
@@ -430,7 +439,7 @@ class WhisperToPuppetTest(ZulipTestCase):
         for user in [sender, handler, non_handler]:
             self.subscribe(user, stream_name)
 
-        stream = self.get_stream(stream_name, sender.realm)
+        stream = get_stream(stream_name, sender.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -486,7 +495,7 @@ class WhisperToPuppetTest(ZulipTestCase):
         for user in [sender, recent_user, non_recent]:
             self.subscribe(user, stream_name)
 
-        stream = self.get_stream(stream_name, sender.realm)
+        stream = get_stream(stream_name, sender.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -543,7 +552,7 @@ class WhisperToPuppetTest(ZulipTestCase):
         for user in [sender, handler]:
             self.subscribe(user, stream_name)
 
-        stream = self.get_stream(stream_name, sender.realm)
+        stream = get_stream(stream_name, sender.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -570,7 +579,7 @@ class WhisperToPuppetTest(ZulipTestCase):
         message_id = orjson.loads(result.content)["id"]
 
         message = Message.objects.get(id=message_id)
-        self.assertIsNotNone(message.whisper_recipients)
+        assert message.whisper_recipients is not None
         self.assertIn("puppet_ids", message.whisper_recipients)
         self.assertEqual(message.whisper_recipients["puppet_ids"], [puppet.id])
 
@@ -589,7 +598,7 @@ class WhisperToPuppetTest(ZulipTestCase):
         for user in [sender, direct_recipient, group_member, puppet_handler, non_recipient]:
             self.subscribe(user, stream_name)
 
-        stream = self.get_stream(stream_name, sender.realm)
+        stream = get_stream(stream_name, sender.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -642,7 +651,7 @@ class WhisperToPuppetTest(ZulipTestCase):
         stream_name = "Verona"
         self.subscribe(sender, stream_name)
 
-        stream = self.get_stream(stream_name, sender.realm)
+        stream = get_stream(stream_name, sender.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -670,12 +679,12 @@ class WhisperToPuppetTest(ZulipTestCase):
         self.subscribe(sender, stream1_name)
         self.subscribe(sender, stream2_name)
 
-        stream1 = self.get_stream(stream1_name, sender.realm)
-        stream1.puppets_enabled = True
+        stream1 = get_stream(stream1_name, sender.realm)
+        stream1.enable_puppet_mode = True
         stream1.save()
 
-        stream2 = self.get_stream(stream2_name, sender.realm)
-        stream2.puppets_enabled = True
+        stream2 = get_stream(stream2_name, sender.realm)
+        stream2.enable_puppet_mode = True
         stream2.save()
 
         # Create puppet in stream2
@@ -713,7 +722,7 @@ class PuppetHandlerAPITest(ZulipTestCase):
         stream_name = "Verona"
         self.subscribe(user, stream_name)
 
-        stream = self.get_stream(stream_name, user.realm)
+        stream = get_stream(stream_name, user.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -748,7 +757,7 @@ class PuppetHandlerAPITest(ZulipTestCase):
         stream_name = "Verona"
         self.subscribe(user, stream_name)
 
-        stream = self.get_stream(stream_name, user.realm)
+        stream = get_stream(stream_name, user.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -782,7 +791,7 @@ class PuppetHandlerAPITest(ZulipTestCase):
         stream_name = "Verona"
         self.subscribe(user, stream_name)
 
-        stream = self.get_stream(stream_name, user.realm)
+        stream = get_stream(stream_name, user.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -815,7 +824,7 @@ class PuppetHandlerAPITest(ZulipTestCase):
         self.subscribe(user, stream_name)
         self.subscribe(handler, stream_name)
 
-        stream = self.get_stream(stream_name, user.realm)
+        stream = get_stream(stream_name, user.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -853,12 +862,13 @@ class BotPuppetWhisperEventTest(ZulipTestCase):
             user_profile=cordelia,
             bot_type=UserProfile.EMBEDDED_BOT,
         )
+        assert bot.bot_type is not None
 
         stream_name = "Verona"
         self.subscribe(sender, stream_name)
         self.subscribe(bot, stream_name)
 
-        stream = self.get_stream(stream_name, sender.realm)
+        stream = get_stream(stream_name, sender.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -906,12 +916,13 @@ class BotPuppetWhisperEventTest(ZulipTestCase):
             user_profile=cordelia,
             bot_type=UserProfile.EMBEDDED_BOT,
         )
+        assert bot.bot_type is not None
 
         stream_name = "Verona"
         self.subscribe(sender, stream_name)
         self.subscribe(bot, stream_name)
 
-        stream = self.get_stream(stream_name, sender.realm)
+        stream = get_stream(stream_name, sender.realm)
         stream.enable_puppet_mode = True
         stream.save()
 
@@ -954,12 +965,13 @@ class BotPuppetWhisperEventTest(ZulipTestCase):
             user_profile=cordelia,
             bot_type=UserProfile.OUTGOING_WEBHOOK_BOT,
         )
+        assert bot.bot_type is not None
 
         stream_name = "Verona"
         self.subscribe(sender, stream_name)
         self.subscribe(bot, stream_name)
 
-        stream = self.get_stream(stream_name, sender.realm)
+        stream = get_stream(stream_name, sender.realm)
         stream.enable_puppet_mode = True
         stream.save()
 

@@ -503,6 +503,153 @@
     }
 }
 
+/* Persona selector for posting as a character */
+.compose-persona-selector {
+    margin-bottom: 4px;
+}
+
+.persona-selector-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border: 1px solid var(--color-border-input);
+    border-radius: 4px;
+    background: var(--color-background-compose-embedded-button-hover);
+    cursor: pointer;
+    font-size: 0.85em;
+    max-width: 150px;
+    overflow: hidden;
+
+    &:hover {
+        border-color: var(--color-border-input-focus);
+    }
+
+    &.using-persona {
+        border-color: hsl(40deg 60% 50%);
+        background: hsl(40deg 60% 95%);
+    }
+
+    .persona-avatar {
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        .fa-user {
+            font-size: 14px;
+            color: var(--color-text-default);
+        }
+
+        .persona-avatar-img {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .persona-avatar-initial {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: hsl(40deg 60% 70%);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+
+    .persona-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+    }
+
+    .fa-caret-down {
+        font-size: 10px;
+        color: var(--color-text-default);
+        flex-shrink: 0;
+    }
+}
+
+/* Persona menu popover */
+.persona-menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 180px;
+    max-width: 250px;
+    padding: 4px 0;
+}
+
+.persona-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: var(--color-text-default);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--color-background-hover);
+    }
+
+    &.selected {
+        background: hsl(40deg 60% 95%);
+    }
+
+    .persona-avatar {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        .fa-user {
+            font-size: 16px;
+        }
+
+        .persona-avatar-img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .persona-avatar-initial {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: hsl(40deg 60% 70%);
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+
+    .persona-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .selected-check {
+        color: hsl(120deg 50% 40%);
+        flex-shrink: 0;
+    }
+}
+
 #message-formatting-controls-container {
     grid-area: message-formatting-controls-container;
     border-radius: 0 0 3px 3px;

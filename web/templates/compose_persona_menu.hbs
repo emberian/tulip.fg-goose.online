@@ -1,0 +1,19 @@
+<div class="persona-menu">
+    {{#each personas}}
+    <a class="persona-menu-item {{#if is_selected}}selected{{/if}}" href="#" data-persona-id="{{id}}">
+        <span class="persona-avatar">
+            {{#if is_yourself}}
+                <i class="fa fa-user" aria-hidden="true"></i>
+            {{else if avatar_url}}
+                <img src="{{avatar_url}}" alt="" class="persona-avatar-img" />
+            {{else}}
+                <span class="persona-avatar-initial" {{#if color}}style="background-color: {{color}}"{{/if}}>{{name_initial}}</span>
+            {{/if}}
+        </span>
+        <span class="persona-name" {{#if color}}style="color: {{color}}"{{/if}}>{{name}}</span>
+        {{#if is_selected}}
+            <i class="fa fa-check selected-check" aria-hidden="true"></i>
+        {{/if}}
+    </a>
+    {{/each}}
+</div>

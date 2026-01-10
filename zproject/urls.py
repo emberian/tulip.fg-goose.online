@@ -187,6 +187,13 @@ from zerver.views.saved_snippets import (
     edit_saved_snippet,
     get_saved_snippets,
 )
+from zerver.views.personas import (
+    create_persona,
+    delete_persona,
+    get_personas,
+    get_realm_personas,
+    update_persona,
+)
 from zerver.views.scheduled_messages import (
     create_scheduled_message_backend,
     delete_scheduled_messages,
@@ -413,6 +420,14 @@ v1_api_and_json_patterns = [
         DELETE=delete_saved_snippet,
         PATCH=edit_saved_snippet,
     ),
+    # personas -> zerver.views.personas (user character identities)
+    rest_path("users/me/personas", GET=get_personas, POST=create_persona),
+    rest_path(
+        "users/me/personas/<int:persona_id>",
+        DELETE=delete_persona,
+        PATCH=update_persona,
+    ),
+    rest_path("realm/personas", GET=get_realm_personas),  # For @-mention typeahead
     rest_path("reminders", GET=fetch_reminders, POST=create_reminders_message_backend),
     rest_path(
         "reminders/<int:reminder_id>",

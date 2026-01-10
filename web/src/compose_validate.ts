@@ -328,6 +328,9 @@ export async function warn_if_mentioning_unsubscribed_user(
     if (mentioned.type === "puppet") {
         return; // puppets are not real users
     }
+    if (mentioned.type === "persona") {
+        return; // personas are user-owned characters, owner is already subscribed
+    }
     const user_id = mentioned.user.user_id;
 
     const stream_id = get_stream_id_for_textarea($textarea);

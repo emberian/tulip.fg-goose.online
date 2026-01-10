@@ -11,6 +11,7 @@ import render_wildcard_mention_not_allowed_error from "../templates/compose_bann
 import * as channel from "./channel.ts";
 import * as compose_banner from "./compose_banner.ts";
 import * as compose_notifications from "./compose_notifications.ts";
+import * as compose_persona from "./compose_persona.ts";
 import * as compose_state from "./compose_state.ts";
 import * as compose_ui from "./compose_ui.ts";
 import * as compose_whisper_pill from "./compose_whisper_pill.ts";
@@ -48,6 +49,8 @@ export type SendMessageData = {
     whisper_to_user_ids?: string;
     whisper_to_group_ids?: string;
     whisper_to_puppet_ids?: string;
+    // Persona ID for posting as a character
+    persona_id?: number;
 } & (
     | {
           type: "stream";
@@ -254,6 +257,12 @@ export let send_message = (): void => {
                 message_data.whisper_to_puppet_ids = JSON.stringify(whisper_recipients.puppet_ids);
             }
         }
+    }
+
+    // Add persona_id if posting as a character
+    const persona_id = compose_persona.get_current_persona_id();
+    if (persona_id !== null) {
+        message_data.persona_id = persona_id;
     }
 
     let local_id: string;

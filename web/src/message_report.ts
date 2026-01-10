@@ -101,6 +101,7 @@ function get_message_container_for_preview(message: Message): MessageContainer {
         modified: false,
         moved: false,
         year_changed: false,
+        persona_real_sender: null,
     };
     return {
         ...computed_variables,

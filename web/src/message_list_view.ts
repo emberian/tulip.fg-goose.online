@@ -78,6 +78,7 @@ export type MessageContainer = {
     should_add_guest_indicator_for_sender: boolean;
     small_avatar_url: string;
     status_message: string | false;
+    persona_real_sender: string | null;
     stream_url?: string;
     subscribed?: boolean;
     pm_with_url?: string;
@@ -170,6 +171,14 @@ function same_sender(a: MessageContainer | undefined, b: MessageContainer | unde
         // If either is a puppet message, they must both be puppet messages
         // with the same puppet_display_name to be considered same sender
         return a_puppet === b_puppet;
+    }
+    // For persona messages, compare by persona_id instead of sender_id
+    const a_persona = a.msg.persona_id;
+    const b_persona = b.msg.persona_id;
+    if (a_persona !== undefined || b_persona !== undefined) {
+        // If either is a persona message, they must both be persona messages
+        // with the same persona_id to be considered same sender
+        return a_persona === b_persona;
     }
     return a.msg.sender_id === b.msg.sender_id;
 }
@@ -603,6 +612,7 @@ export class MessageListView {
         edited: boolean;
         moved: boolean;
         modified: boolean;
+        persona_real_sender: string | null;
     } {
         const is_typing = typing_data.is_message_editing(message.id);
         if (is_typing) {
@@ -675,15 +685,28 @@ export class MessageListView {
         const sender_is_guest = people.sender_is_guest(message);
         const sender_is_deactivated = people.sender_is_deactivated(message);
         const sender = people.get_by_user_id(message.sender_id);
-        // Use effective_color (considers group memberships) when available, fall back to personal color
-        const sender_color = sender?.effective_color ?? sender?.color ?? null;
+        // Use persona color if available, otherwise use effective_color (considers group memberships), fall back to personal color
+        const sender_color =
+            message.persona_color ?? sender?.effective_color ?? sender?.color ?? null;
+        // For persona messages, include the real sender's name for tooltip
+        const persona_real_sender =
+            message.persona_id !== undefined ? (sender?.full_name ?? null) : null;
         const should_add_guest_indicator_for_sender = people.should_add_guest_user_indicator(
             message.sender_id,
         );
 
-        const small_avatar_url = is_hidden
-            ? people.get_muted_user_avatar_url()
-            : people.small_avatar_url(message);
+        // For persona messages, use the persona's avatar (already set in message.avatar_url by backend)
+        // For muted users, show generic muted avatar
+        // Otherwise use the sender's avatar
+        let small_avatar_url: string;
+        if (is_hidden) {
+            small_avatar_url = people.get_muted_user_avatar_url();
+        } else if (message.persona_id !== undefined && message.avatar_url) {
+            // Persona message - use the persona avatar from the message
+            small_avatar_url = message.avatar_url;
+        } else {
+            small_avatar_url = people.small_avatar_url(message);
+        }
         let background_color;
         if (message.type === "stream") {
             background_color = stream_data.get_color(message.stream_id);
@@ -702,6 +725,7 @@ export class MessageListView {
             is_hidden,
             mention_classname,
             include_sender,
+            persona_real_sender,
             ...this._maybe_get_me_message(is_hidden, message),
             ...this._get_message_edited_and_moved_vars(message),
         };
@@ -858,25 +882,23 @@ export class MessageListView {
             );
 
             // Check if this is a whisper message (whisper_recipients is set and not null)
-            const is_whisper =
-                message.whisper_recipients !== undefined && message.whisper_recipients !== null;
+            const whisper_recipients = message.whisper_recipients;
+            const is_whisper = whisper_recipients !== undefined && whisper_recipients !== null;
             let whisper_recipients_text: string | undefined;
             if (is_whisper) {
                 // Build a display string for whisper recipients
                 const recipient_parts: string[] = [];
-                if (message.whisper_recipients.user_ids?.length) {
-                    const user_names = message.whisper_recipients.user_ids
+                if (whisper_recipients.user_ids?.length) {
+                    const user_names = whisper_recipients.user_ids
                         .map((id) => people.get_by_user_id(id)?.full_name ?? `User ${id}`)
                         .slice(0, 3);
-                    if (message.whisper_recipients.user_ids.length > 3) {
-                        user_names.push(
-                            `+${message.whisper_recipients.user_ids.length - 3} more`,
-                        );
+                    if (whisper_recipients.user_ids.length > 3) {
+                        user_names.push(`+${whisper_recipients.user_ids.length - 3} more`);
                     }
                     recipient_parts.push(...user_names);
                 }
-                if (message.whisper_recipients.group_ids?.length) {
-                    const group_names = message.whisper_recipients.group_ids
+                if (whisper_recipients.group_ids?.length) {
+                    const group_names = whisper_recipients.group_ids
                         .map((id) => {
                             const group = user_groups.maybe_get_user_group_from_id(id);
                             return group
@@ -884,10 +906,8 @@ export class MessageListView {
                                 : $t({defaultMessage: "Unknown group"});
                         })
                         .slice(0, 3);
-                    if (message.whisper_recipients.group_ids.length > 3) {
-                        group_names.push(
-                            `+${message.whisper_recipients.group_ids.length - 3} more`,
-                        );
+                    if (whisper_recipients.group_ids.length > 3) {
+                        group_names.push(`+${whisper_recipients.group_ids.length - 3} more`);
                     }
                     recipient_parts.push(...group_names);
                 }

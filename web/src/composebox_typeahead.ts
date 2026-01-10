@@ -22,6 +22,7 @@ import * as message_store from "./message_store.ts";
 import * as muted_users from "./muted_users.ts";
 import {page_params} from "./page_params.ts";
 import * as people from "./people.ts";
+import * as personas from "./personas.ts";
 import type {PseudoMentionUser, User} from "./people.ts";
 import * as presence from "./presence.ts";
 import * as realm_playground from "./realm_playground.ts";
@@ -645,6 +646,31 @@ export function filter_and_sort_mentions(
         }
     }
 
+    // Add persona suggestions (user-owned characters, realm-wide)
+    // Trigger fetch if not already fetched (async, for future calls)
+    personas.fetch_realm_personas();
+
+    // Get cached personas synchronously
+    const realm_personas = personas.get_realm_personas();
+    const query_lower = typeahead.clean_query_lowercase(query);
+
+    for (const persona of realm_personas) {
+        if (typeahead.query_matches_string_in_order(query_lower, persona.name.toLowerCase(), " ")) {
+            suggestions.push({
+                type: "persona",
+                persona: {
+                    id: persona.id,
+                    name: persona.name,
+                    avatar_url: persona.avatar_url,
+                    color: persona.color,
+                    user_id: persona.user_id,
+                    user_full_name: persona.user_full_name,
+                },
+                is_silent,
+            });
+        }
+    }
+
     return suggestions;
 }
 
@@ -664,8 +690,8 @@ export function get_pm_people(query: string): (UserGroupPillData | UserPillData)
     // to do this.
     const user_suggestions: (UserGroupPillData | UserPillData)[] = [];
     for (const suggestion of suggestions) {
-        // Skip puppets - they can't receive DMs
-        if (suggestion.type === "puppet") {
+        // Skip puppets and personas - they can't receive DMs
+        if (suggestion.type === "puppet" || suggestion.type === "persona") {
             continue;
         }
         if (
@@ -1243,6 +1269,7 @@ export function content_item_html(item: TypeaheadSuggestion): string | undefined
         case "user":
         case "broadcast":
         case "puppet":
+        case "persona":
             return typeahead_helper.render_person_or_user_group(item);
         case "slash":
             return typeahead_helper.render_typeahead_item({
@@ -1377,6 +1404,22 @@ export function content_typeahead_selected(
             // Use @**Name** syntax for puppet mentions (no user_id)
             const puppet_mention = is_silent ? `@_**${item.puppet.name}** ` : `@**${item.puppet.name}** `;
             beginning += puppet_mention;
+            break;
+        }
+        case "persona": {
+            // Persona mention - user-owned character, use @**Name** syntax
+            const is_silent = item.is_silent;
+            beginning = beginning.slice(0, -token.length - 1);
+            if (beginning.endsWith("@_*")) {
+                beginning = beginning.slice(0, -3);
+            } else if (beginning.endsWith("@*") || beginning.endsWith("@_")) {
+                beginning = beginning.slice(0, -2);
+            } else if (beginning.endsWith("@")) {
+                beginning = beginning.slice(0, -1);
+            }
+            // Use @**Name** syntax for persona mentions (like puppets)
+            const persona_mention = is_silent ? `@_**${item.persona.name}** ` : `@**${item.persona.name}** `;
+            beginning += persona_mention;
             break;
         }
         case "slash":

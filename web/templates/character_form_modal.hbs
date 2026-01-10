@@ -1,0 +1,27 @@
+<div id="character-form-modal-content">
+    <form id="character-form">
+        <div class="input-group">
+            <label for="character-name" class="modal-field-label">{{t "Name"}}</label>
+            <input type="text" id="character-name" name="name" class="modal_text_input" maxlength="100" required
+                placeholder="{{t 'Enter character name'}}" value="{{name}}" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <label for="character-avatar-url" class="modal-field-label">{{t "Avatar URL"}} <span class="optional">({{t "optional"}})</span></label>
+            <input type="url" id="character-avatar-url" name="avatar_url" class="modal_text_input" maxlength="500"
+                placeholder="{{t 'https://example.com/avatar.png'}}" value="{{avatar_url}}" autocomplete="off">
+        </div>
+        <div class="input-group color-input-group">
+            <label for="character-color" class="modal-field-label">{{t "Color"}} <span class="optional">({{t "optional"}})</span></label>
+            <input type="color" id="character-color" name="color" value="{{color}}">
+            <button type="button" class="button small clear-color-button">{{t "Clear"}}</button>
+        </div>
+        <div class="input-group">
+            <label for="character-bio" class="modal-field-label">{{t "Bio"}} <span class="optional">({{t "optional"}})</span></label>
+            <textarea id="character-bio" name="bio" class="modal-textarea" maxlength="500" rows="3"
+                placeholder="{{t 'A short description of your character'}}">{{bio}}</textarea>
+        </div>
+        {{#if is_editing}}
+            <input type="hidden" id="character-id" name="id" value="{{id}}">
+        {{/if}}
+    </form>
+</div>

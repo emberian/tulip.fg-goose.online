@@ -36,11 +36,7 @@ from zerver.models import (
     UserMessage,
     UserProfile,
 )
-from zerver.models.groups import (
-    NamedUserGroup,
-    SystemGroups,
-    get_realm_system_groups_name_dict,
-)
+from zerver.models.groups import NamedUserGroup, SystemGroups, get_realm_system_groups_name_dict
 from zerver.models.realms import get_fake_email_domain, require_unique_names
 from zerver.models.users import (
     active_non_guest_user_ids,
@@ -110,7 +106,7 @@ def check_color(color: str | None) -> str | None:
         raise JsonableError(_("Color must be a string!"))
 
     # Check hex format: #RGB or #RRGGBB
-    if not re.match(r'^#[0-9A-Fa-f]{3}$|^#[0-9A-Fa-f]{6}$', color):
+    if not re.match(r"^#[0-9A-Fa-f]{3}$|^#[0-9A-Fa-f]{6}$", color):
         raise JsonableError(_("Invalid color format! Use hex format like #RGB or #RRGGBB."))
 
     return color
@@ -1156,6 +1152,7 @@ def get_data_for_inaccessible_user(realm: Realm, user_id: int) -> APIUserDict:
         avatar_url=get_avatar_for_inaccessible_user(),
         profile_data={},
         is_imported_stub=False,
+        color=None,
     )
     return user_dict
 

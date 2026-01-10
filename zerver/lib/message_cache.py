@@ -246,6 +246,12 @@ class MessageDict:
             if obj.get("puppet_avatar_url"):
                 obj["avatar_url"] = obj["puppet_avatar_url"]
 
+        # For persona messages, override sender display info with persona identity
+        if obj.get("persona_display_name"):
+            obj["sender_full_name"] = obj["persona_display_name"]
+            if obj.get("persona_avatar_url"):
+                obj["avatar_url"] = obj["persona_avatar_url"]
+
         if apply_markdown:
             obj["content_type"] = "text/html"
             obj["content"] = obj["rendered_content"]
@@ -339,6 +345,10 @@ class MessageDict:
                 "sender__realm_id": message.sender.realm_id,
                 "puppet_display_name": message.puppet_display_name,
                 "puppet_avatar_url": message.puppet_avatar_url,
+                "persona_id": message.persona_id,
+                "persona_display_name": message.persona_display_name,
+                "persona_avatar_url": message.persona_avatar_url,
+                "persona_color": message.persona_color,
                 "whisper_recipients": message.whisper_recipients,
             }
             for message in messages
@@ -368,6 +378,10 @@ class MessageDict:
             "sender__realm_id",
             "puppet_display_name",
             "puppet_avatar_url",
+            "persona_id",
+            "persona_display_name",
+            "persona_avatar_url",
+            "persona_color",
             "whisper_recipients",
         ]
         # Uses index: zerver_message_pkey
@@ -407,6 +421,10 @@ class MessageDict:
             submessages=row["submessages"],
             puppet_display_name=row.get("puppet_display_name"),
             puppet_avatar_url=row.get("puppet_avatar_url"),
+            persona_id=row.get("persona_id"),
+            persona_display_name=row.get("persona_display_name"),
+            persona_avatar_url=row.get("persona_avatar_url"),
+            persona_color=row.get("persona_color"),
             whisper_recipients=row.get("whisper_recipients"),
         )
 
@@ -431,6 +449,10 @@ class MessageDict:
         submessages: list[dict[str, Any]],
         puppet_display_name: str | None = None,
         puppet_avatar_url: str | None = None,
+        persona_id: int | None = None,
+        persona_display_name: str | None = None,
+        persona_avatar_url: str | None = None,
+        persona_color: str | None = None,
         whisper_recipients: dict[str, list[int]] | None = None,
     ) -> dict[str, Any]:
         obj = dict(
@@ -499,6 +521,13 @@ class MessageDict:
         if puppet_display_name is not None:
             obj["puppet_display_name"] = puppet_display_name
             obj["puppet_avatar_url"] = puppet_avatar_url
+
+        # Persona identity for user character/roleplay messages
+        if persona_display_name is not None:
+            obj["persona_id"] = persona_id
+            obj["persona_display_name"] = persona_display_name
+            obj["persona_avatar_url"] = persona_avatar_url
+            obj["persona_color"] = persona_color
 
         # Whisper recipients for visibility-restricted messages
         if whisper_recipients is not None:

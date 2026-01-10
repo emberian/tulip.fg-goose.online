@@ -43,6 +43,7 @@ import * as onboarding_steps from "./onboarding_steps.ts";
 import * as overlays from "./overlays.ts";
 import * as peer_data from "./peer_data.ts";
 import * as people from "./people.ts";
+import * as personas from "./personas.ts";
 import * as pm_list from "./pm_list.ts";
 import * as reactions from "./reactions.ts";
 import * as realm_icon from "./realm_icon.ts";
@@ -1228,6 +1229,10 @@ export function dispatch_normal_event(event) {
                     user_status.get_status_emoji(event.user_id),
                 );
             }
+            break;
+
+        case "user_persona":
+            personas.handle_persona_event(event);
             break;
 
         case "user_topic": {

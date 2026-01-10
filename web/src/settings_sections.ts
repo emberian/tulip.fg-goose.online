@@ -12,6 +12,7 @@ import * as settings_invites from "./settings_invites.ts";
 import * as settings_linkifiers from "./settings_linkifiers.ts";
 import * as settings_muted_users from "./settings_muted_users.ts";
 import * as settings_notifications from "./settings_notifications.ts";
+import * as settings_personas from "./settings_personas.ts";
 import * as settings_org from "./settings_org.ts";
 import * as settings_playgrounds from "./settings_playgrounds.ts";
 import * as settings_preferences from "./settings_preferences.ts";
@@ -63,6 +64,7 @@ export function initialize(): void {
     load_func_dict.set("uploaded-files", attachments_ui.set_up_attachments);
     load_func_dict.set("topics", settings_user_topics.set_up);
     load_func_dict.set("muted-users", settings_muted_users.set_up);
+    load_func_dict.set("my-characters", settings_personas.set_up);
 
     // org
     load_func_dict.set("org_misc", settings_org.set_up);
@@ -115,6 +117,7 @@ export function reset_sections(): void {
     settings_streams.reset();
     settings_user_topics.reset();
     settings_muted_users.reset();
+    settings_personas.reset();
     alert_words_ui.reset();
     settings_folders.reset();
     // settings_users doesn't need a reset()

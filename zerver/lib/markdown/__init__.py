@@ -114,6 +114,7 @@ class MessageRenderingResult:
     mentions_stream_wildcard: bool
     mentions_user_ids: set[int]
     mentions_user_group_ids: set[int]
+    mentions_persona_ids: set[int]  # Persona mentions (notifies owner)
     alert_words: set[str]
     links_for_preview: set[str]
     user_ids_with_alert_words: set[int]
@@ -135,6 +136,8 @@ class DbData:
     # For puppet mention support - the stream we're sending to (if any)
     sending_stream_id: int | None = None
     puppet_names: set[str] | None = None
+    # For persona mention support - maps lowercase name to (persona_id, owner_user_id)
+    persona_data: dict[str, tuple[int, int]] | None = None
 
 
 # Format version of the Markdown rendering; stored along with rendered
@@ -1769,7 +1772,7 @@ class UserMentionPattern(CompiledInlineProcessor):
                 name = user.full_name
                 user_id = str(user.id)
             else:
-                # Check if this is a puppet mention (character name)
+                # Check if this is a puppet mention (character name, stream-specific)
                 puppet_names = db_data.puppet_names
                 if puppet_names is not None and name.lower() in {p.lower() for p in puppet_names}:
                     # This is a puppet mention - render with puppet-mention class
@@ -1779,6 +1782,22 @@ class UserMentionPattern(CompiledInlineProcessor):
                     text = f"@{name}" if not silent else name
                     el.text = markdown.util.AtomicString(text)
                     return el, m.start(), m.end()
+
+                # Check if this is a persona mention (user-owned character, realm-wide)
+                persona_data = db_data.persona_data
+                if persona_data is not None and name.lower() in persona_data:
+                    persona_id, owner_user_id = persona_data[name.lower()]
+                    # Track the persona mention for notifications
+                    if not silent:
+                        self.zmd.zulip_rendering_result.mentions_persona_ids.add(persona_id)
+                    # Render with persona-mention class
+                    el = Element("span")
+                    el.set("class", "persona-mention" + (" silent" if silent else ""))
+                    el.set("data-persona-id", str(persona_id))
+                    text = f"@{name}" if not silent else name
+                    el.text = markdown.util.AtomicString(text)
+                    return el, m.start(), m.end()
+
                 # Don't highlight @mentions that don't refer to a valid user
                 return None, None, None
 
@@ -2658,6 +2677,7 @@ def do_convert(
         mentions_stream_wildcard=False,
         mentions_user_ids=set(),
         mentions_user_group_ids=set(),
+        mentions_persona_ids=set(),
         alert_words=set(),
         links_for_preview=set(),
         user_ids_with_alert_words=set(),
@@ -2728,6 +2748,18 @@ def do_convert(
             except Stream.DoesNotExist:
                 pass
 
+        # Get persona data for the realm (realm-wide, not stream-specific)
+        persona_data: dict[str, tuple[int, int]] | None = None
+        from zerver.models.personas import UserPersona
+
+        personas = UserPersona.objects.filter(
+            user__realm=message_realm,
+            user__is_active=True,
+            is_active=True,
+        ).values_list("id", "name", "user_id")
+        if personas:
+            persona_data = {name.lower(): (persona_id, user_id) for persona_id, name, user_id in personas}
+
         md_engine.zulip_db_data = DbData(
             realm_alert_words_automaton=realm_alert_words_automaton,
             mention_data=mention_data,
@@ -2740,6 +2772,7 @@ def do_convert(
             user_upload_previews=user_upload_previews,
             sending_stream_id=sending_stream_id,
             puppet_names=puppet_names,
+            persona_data=persona_data,
         )
 
     try:

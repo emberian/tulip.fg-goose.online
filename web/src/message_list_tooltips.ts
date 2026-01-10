@@ -1,4 +1,5 @@
 import $ from "jquery";
+import _ from "lodash";
 import assert from "minimalistic-assert";
 import * as tippy from "tippy.js";
 
@@ -386,11 +387,19 @@ export function initialize(): void {
     message_list_tooltip(".view_user_card_tooltip", {
         delay: LONG_HOVER_DELAY,
         onShow(instance) {
-            const is_bot = $(instance.reference).attr("data-is-bot") === "true";
-            if (is_bot) {
-                instance.setContent(parse_html($("#view-bot-card-tooltip-template").html()));
+            const $ref = $(instance.reference);
+            const persona_real_sender = $ref.attr("data-persona-real-sender");
+            if (persona_real_sender) {
+                // For persona messages, show "Posted by [Real Name]"
+                const tooltip_html = `<span>Posted by <strong>${_.escape(persona_real_sender)}</strong></span>`;
+                instance.setContent(parse_html(tooltip_html));
             } else {
-                instance.setContent(parse_html($("#view-user-card-tooltip-template").html()));
+                const is_bot = $ref.attr("data-is-bot") === "true";
+                if (is_bot) {
+                    instance.setContent(parse_html($("#view-bot-card-tooltip-template").html()));
+                } else {
+                    instance.setContent(parse_html($("#view-user-card-tooltip-template").html()));
+                }
             }
         },
         onHidden(instance) {

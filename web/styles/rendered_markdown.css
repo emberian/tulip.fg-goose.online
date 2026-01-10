@@ -356,6 +356,26 @@
         }
     }
 
+    /* Persona mentions (user-owned characters) */
+    .persona-mention {
+        padding: 0 3px;
+        border-radius: 3px;
+        white-space: nowrap;
+        font-size: 0.95em;
+        /* Use a warm amber/gold color for persona mentions */
+        color: hsl(35deg 70% 35%);
+        background-color: hsl(40deg 60% 92%);
+        font-style: italic;
+
+        &:hover {
+            background-color: hsl(40deg 60% 85%);
+        }
+
+        &.silent {
+            color: hsl(35deg 50% 45%);
+        }
+    }
+
     .alert-word {
         background-color: var(--color-background-alert-word);
     }
@@ -1095,6 +1115,11 @@
 
 /* Improve visibility of colored puppet mentions */
 .puppet-mention[style*="color"] {
+    font-weight: 500;
+}
+
+/* Improve visibility of colored persona mentions */
+.persona-mention[style*="color"] {
     font-weight: 500;
 }
 

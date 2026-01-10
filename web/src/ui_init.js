@@ -30,6 +30,7 @@ import * as compose from "./compose.ts";
 import * as compose_closed_ui from "./compose_closed_ui.ts";
 import * as compose_notifications from "./compose_notifications.ts";
 import * as compose_paste from "./compose_paste.ts";
+import * as compose_persona from "./compose_persona.ts";
 import * as compose_pm_pill from "./compose_pm_pill.ts";
 import * as compose_recipient from "./compose_recipient.ts";
 import * as compose_reply from "./compose_reply.ts";
@@ -648,6 +649,7 @@ export async function initialize_everything(state_data) {
     });
     copy_messages.initialize();
     compose_setup.initialize();
+    compose_persona.initialize();
     // Typeahead must be initialized after compose_setup.initialize()
     composebox_typeahead.initialize({
         on_enter_send: compose.finish,
