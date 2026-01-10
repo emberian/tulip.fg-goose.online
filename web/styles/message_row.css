@@ -1289,24 +1289,48 @@
     align-items: center;
     gap: 5px;
     font-size: 0.85em;
-    color: var(--color-text-default);
-    opacity: 0.7;
-    margin-top: 4px;
-    padding: 2px 6px;
-    background-color: hsl(217deg 20% 93% / 60%);
-    border-radius: 3px;
+    color: hsl(217deg 60% 30%);
+    margin-bottom: 6px;
+    padding: 3px 8px;
+    background-color: hsl(217deg 40% 88%);
+    border-radius: 4px;
+    border-left: 3px solid hsl(217deg 60% 50%);
     width: fit-content;
 
     .fa-eye-slash {
         font-size: 0.9em;
+        color: hsl(217deg 70% 40%);
     }
 
     .whisper-label {
-        font-style: italic;
+        font-weight: 500;
     }
 }
 
 /* Dark theme adjustments for whisper indicator */
 .dark-theme .whisper-indicator {
-    background-color: hsl(217deg 20% 30% / 60%);
+    background-color: hsl(217deg 35% 22%);
+    color: hsl(217deg 50% 85%);
+    border-left-color: hsl(217deg 60% 55%);
+
+    .fa-eye-slash {
+        color: hsl(217deg 60% 75%);
+    }
+
+    &:hover {
+        background-color: hsl(217deg 40% 28%);
+        border-left-color: hsl(217deg 65% 60%);
+    }
 }
+
+/* Make whisper indicator clickable */
+.whisper-indicator {
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-left-color 0.15s ease;
+
+    &:hover {
+        background-color: hsl(217deg 45% 82%);
+        border-left-color: hsl(217deg 65% 45%);
+    }
+}
+

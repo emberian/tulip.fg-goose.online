@@ -2329,27 +2329,28 @@ textarea.new_message_textarea {
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
-    background-color: hsl(217deg 20% 96%);
-    border-bottom: 1px solid hsl(0deg 0% 88%);
+    background-color: hsl(217deg 35% 92%);
+    border-bottom: 1px solid hsl(217deg 30% 82%);
 
     .whisper-recipients-header {
         display: flex;
         align-items: center;
         gap: 5px;
-        color: var(--color-text-default);
+        color: hsl(217deg 60% 28%);
         font-size: 0.9em;
+        font-weight: 500;
         white-space: nowrap;
 
         .fa-eye-slash {
-            color: hsl(0deg 0% 50%);
+            color: hsl(217deg 70% 40%);
         }
     }
 
     .whisper-pill-container {
         flex: 1;
         min-width: 0;
-        background-color: var(--color-background-compose);
-        border: 1px solid hsl(0deg 0% 80%);
+        background-color: hsl(0deg 0% 100%);
+        border: 1px solid hsl(217deg 30% 75%);
         border-radius: 4px;
         padding: 2px 4px;
 
@@ -2360,7 +2361,7 @@ textarea.new_message_textarea {
 
             &:empty::before {
                 content: attr(data-no-recipients-text);
-                color: hsl(0deg 0% 60%);
+                color: hsl(0deg 0% 50%);
             }
         }
     }
@@ -2368,8 +2369,8 @@ textarea.new_message_textarea {
 
 /* Active whisper toggle button */
 .compose_whisper_toggle.active {
-    color: var(--color-compose-send-control-button-focus-shadow);
-    background-color: hsl(217deg 20% 90%);
+    color: hsl(217deg 70% 45%);
+    background-color: hsl(217deg 40% 88%);
     border-radius: 3px;
 }
 
@@ -2377,4 +2378,32 @@ textarea.new_message_textarea {
 #compose:has(#compose-recipient.compose-recipient-direct-selected) .whisper-divider,
 #compose:has(#compose-recipient.compose-recipient-direct-selected) .compose_whisper_toggle {
     display: none;
+}
+
+/* Dark theme adjustments for whisper compose UI */
+.dark-theme #compose-whisper-recipient {
+    background-color: hsl(217deg 30% 20%);
+    border-bottom-color: hsl(217deg 25% 30%);
+
+    .whisper-recipients-header {
+        color: hsl(0deg 0% 95%);
+
+        .fa-eye-slash {
+            color: hsl(217deg 70% 80%);
+        }
+    }
+
+    .whisper-pill-container {
+        background-color: hsl(220deg 20% 14%);
+        border-color: hsl(217deg 30% 40%);
+
+        .input:empty::before {
+            color: hsl(0deg 0% 65%);
+        }
+    }
+}
+
+.dark-theme .compose_whisper_toggle.active {
+    color: hsl(217deg 70% 80%);
+    background-color: hsl(217deg 35% 30%);
 }

@@ -53,16 +53,15 @@
     {{/if}}
 </div>
 
-{{#if is_whisper}}
-<div class="whisper-indicator">
-    <i class="fa fa-eye-slash" aria-hidden="true"></i>
-    <span class="whisper-label">Whispered{{#if whisper_recipients_text}} to {{whisper_recipients_text}}{{/if}}</span>
-</div>
-{{/if}}
-
 {{#unless status_message}}
     {{#unless is_hidden}}
     <div class="message_content rendered_markdown">
+        {{#if is_whisper}}
+        <div class="whisper-indicator">
+            <i class="fa fa-eye-slash" aria-hidden="true"></i>
+            <span class="whisper-label">Whispered{{#if whisper_recipients_text}} to {{whisper_recipients_text}}{{/if}}</span>
+        </div>
+        {{/if}}
         {{#if use_match_properties}}
             {{rendered_markdown msg/match_content}}
         {{else}}

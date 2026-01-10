@@ -5,7 +5,10 @@ import type * as tippy from "tippy.js";
 import render_message_actions_popover from "../templates/popovers/message_actions_popover.hbs";
 
 import * as clipboard_handler from "./clipboard_handler.ts";
+import * as compose_actions from "./compose_actions.ts";
 import * as compose_reply from "./compose_reply.ts";
+import * as compose_state from "./compose_state.ts";
+import * as compose_whisper_pill from "./compose_whisper_pill.ts";
 import * as condense from "./condense.ts";
 import {show_copied_confirmation} from "./copied_tooltip.ts";
 import * as emoji_picker from "./emoji_picker.ts";
@@ -20,6 +23,7 @@ import * as popover_menus_data from "./popover_menus_data.ts";
 import * as popovers from "./popovers.ts";
 import * as read_receipts from "./read_receipts.ts";
 import * as rows from "./rows.ts";
+import {current_user} from "./state_data.ts";
 import * as stream_popover from "./stream_popover.ts";
 import {parse_html} from "./ui_util.ts";
 import * as unread_ops from "./unread_ops.ts";
@@ -237,6 +241,70 @@ export function initialize({
                     instance.reference.parentElement,
                     message_id,
                 );
+                popover_menus.hide_current_popover_if_visible(instance);
+            });
+
+            $popper.one("click", ".whisper_back_button", (e) => {
+                const message_id = Number($(e.currentTarget).attr("data-message-id"));
+                assert(message_lists.current !== undefined);
+                const message = message_lists.current.get(message_id);
+                assert(message?.type === "stream");
+
+                // Open compose in the same stream/topic
+                compose_actions.start({
+                    message_type: "stream",
+                    stream_id: message.stream_id,
+                    topic: message.topic,
+                    trigger: "whisper back",
+                });
+
+                // Enable whisper mode and pre-fill recipients
+                compose_state.set_whisper_mode(true);
+                const $whisper_row = $("#compose-whisper-recipient");
+                const $whisper_toggle = $(".compose_whisper_toggle");
+                $whisper_row.show();
+                $whisper_toggle.addClass("active");
+
+                // Build the list of whisper recipients:
+                // Include original recipients (excluding current user) + the sender
+                const whisper_recipients = message.whisper_recipients;
+                const recipient_user_ids: number[] = [];
+                const recipient_group_ids: number[] = [];
+
+                if (whisper_recipients) {
+                    // Add original user recipients, excluding current user
+                    if (whisper_recipients.user_ids) {
+                        for (const user_id of whisper_recipients.user_ids) {
+                            if (user_id !== current_user.user_id) {
+                                recipient_user_ids.push(user_id);
+                            }
+                        }
+                    }
+                    // Include the original group recipients
+                    if (whisper_recipients.group_ids) {
+                        recipient_group_ids.push(...whisper_recipients.group_ids);
+                    }
+                }
+
+                // Add the sender if not already included and not the current user
+                if (
+                    message.sender_id !== current_user.user_id &&
+                    !recipient_user_ids.includes(message.sender_id)
+                ) {
+                    recipient_user_ids.push(message.sender_id);
+                }
+
+                // Set the whisper recipients using pills
+                compose_whisper_pill.set_from_user_and_group_ids(
+                    recipient_user_ids,
+                    recipient_group_ids,
+                );
+
+                // Focus on compose textarea
+                $("textarea#compose-textarea").trigger("focus");
+
+                e.preventDefault();
+                e.stopPropagation();
                 popover_menus.hide_current_popover_if_visible(instance);
             });
 

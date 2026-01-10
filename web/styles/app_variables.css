@@ -399,10 +399,11 @@
        the widest the message area gets, so we preserve this
        value to better present a readable message area across
        different info densities and the manual hiding of the
-       left and right sidebars.
-       918.6px at 16px/1em
+       left and right sidebars. Increased slightly to accommodate
+       whisper recipient row in compose box.
+       946.6px at 16px/1em
     */
-    --message-area-max-width: 57.4125em;
+    --message-area-max-width: 59.1625em;
 
     /* Box shadow for overlays across the web app */
     --box-shadow-overlay: none;

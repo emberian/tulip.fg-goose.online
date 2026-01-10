@@ -45,6 +45,7 @@ type ActionPopoverContext = {
     should_display_read_receipts_option: boolean;
     should_display_add_reaction_option: boolean;
     should_display_message_report_option: boolean;
+    should_display_whisper_back: boolean;
 };
 
 type TopicPopoverContext = {
@@ -204,6 +205,13 @@ export function get_actions_popover_content_context(message_id: number): ActionP
 
     const should_display_quote_message = not_spectator;
 
+    // Show "Whisper back" option for whispered messages in streams
+    const should_display_whisper_back =
+        not_spectator &&
+        message.type === "stream" &&
+        message.whisper_recipients !== null &&
+        message.whisper_recipients !== undefined;
+
     const conversation_time_url = hash_util.by_conversation_and_time_url(message);
 
     const should_display_delete_option = message_delete.get_deletability(message);
@@ -254,6 +262,7 @@ export function get_actions_popover_content_context(message_id: number): ActionP
         should_display_read_receipts_option,
         should_display_quote_message,
         should_display_message_report_option: should_display_message_report_option(),
+        should_display_whisper_back,
     };
 }
 

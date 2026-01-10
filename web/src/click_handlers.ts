@@ -13,6 +13,7 @@ import * as buddy_data from "./buddy_data.ts";
 import * as compose_actions from "./compose_actions.ts";
 import * as compose_reply from "./compose_reply.ts";
 import * as compose_state from "./compose_state.ts";
+import * as compose_whisper_pill from "./compose_whisper_pill.ts";
 import * as emoji_picker from "./emoji_picker.ts";
 import * as hash_util from "./hash_util.ts";
 import * as hashchange from "./hashchange.ts";
@@ -35,6 +36,7 @@ import * as settings_toggle from "./settings_toggle.ts";
 import * as sidebar_ui from "./sidebar_ui.ts";
 import * as spectators from "./spectators.ts";
 import * as starred_messages_ui from "./starred_messages_ui.ts";
+import {current_user} from "./state_data.ts";
 import * as stream_list from "./stream_list.ts";
 import * as stream_popover from "./stream_popover.ts";
 import * as topic_list from "./topic_list.ts";
@@ -171,6 +173,11 @@ export function initialize(): void {
             return true;
         }
 
+        // Whisper indicator (triggers whisper back)
+        if ($target.closest(".whisper-indicator").length > 0) {
+            return true;
+        }
+
         // Hide button for a revealed message sent by a muted user.
         if ($target.closest(".rehide-muted-user-message").length > 0) {
             return true;
@@ -272,6 +279,64 @@ export function initialize(): void {
         assert(message_lists.current !== undefined);
         const message_id = rows.id($(e.currentTarget).closest(".message_row"));
         message_lists.current.view.reveal_hidden_message(message_id);
+        e.stopPropagation();
+        e.preventDefault();
+    });
+
+    // Whisper indicator click - trigger whisper back
+    $("body").on("click", ".whisper-indicator", (e) => {
+        assert(message_lists.current !== undefined);
+        const message_id = rows.id($(e.currentTarget).closest(".message_row"));
+        const message = message_lists.current.get(message_id);
+        if (!message || message.type !== "stream") {
+            return;
+        }
+
+        // Open compose in the same stream/topic
+        compose_actions.start({
+            message_type: "stream",
+            stream_id: message.stream_id,
+            topic: message.topic,
+            trigger: "whisper indicator click",
+        });
+
+        // Enable whisper mode and pre-fill recipients
+        compose_state.set_whisper_mode(true);
+        $("#compose-whisper-recipient").show();
+        $(".compose_whisper_toggle").addClass("active");
+
+        // Build the list of whisper recipients
+        const whisper_recipients = message.whisper_recipients;
+        const recipient_user_ids: number[] = [];
+        const recipient_group_ids: number[] = [];
+
+        if (whisper_recipients) {
+            if (whisper_recipients.user_ids) {
+                for (const user_id of whisper_recipients.user_ids) {
+                    if (user_id !== current_user.user_id) {
+                        recipient_user_ids.push(user_id);
+                    }
+                }
+            }
+            if (whisper_recipients.group_ids) {
+                recipient_group_ids.push(...whisper_recipients.group_ids);
+            }
+        }
+
+        // Add the sender if not already included and not the current user
+        if (
+            message.sender_id !== current_user.user_id &&
+            !recipient_user_ids.includes(message.sender_id)
+        ) {
+            recipient_user_ids.push(message.sender_id);
+        }
+
+        // Set the whisper recipients using pills
+        compose_whisper_pill.set_from_user_and_group_ids(recipient_user_ids, recipient_group_ids);
+
+        // Focus on compose textarea
+        $("textarea#compose-textarea").trigger("focus");
+
         e.stopPropagation();
         e.preventDefault();
     });

@@ -21,8 +21,9 @@ type SendMessageData = {
     resend?: boolean;
     locally_echoed?: boolean;
     // Whisper fields for visibility-restricted messages (stream messages only)
-    whisper_to_user_ids?: number[];
-    whisper_to_group_ids?: number[];
+    // These are JSON-stringified arrays since the backend expects Json[list[int]]
+    whisper_to_user_ids?: string;
+    whisper_to_group_ids?: string;
 } & (
     | {
           type: "stream";

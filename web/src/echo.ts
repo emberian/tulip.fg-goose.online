@@ -100,6 +100,7 @@ export type RawLocalMessage = MessageRequestObject & {
     topic_links: TopicLink[];
     reactions: MessageReaction[];
     draft_id: string;
+    whisper_recipients?: {user_ids?: number[]; group_ids?: number[]} | null;
 } & (StreamMessageObject | PrivateMessageObject);
 
 export type PostMessageAPIData = z.output<typeof send_message_api_response_schema>;
@@ -259,6 +260,18 @@ export function insert_local_message(
     const raw_content = message_request.content;
     const topic = message_request.topic;
 
+    // Parse whisper recipients from the message request if present
+    let whisper_recipients: {user_ids?: number[]; group_ids?: number[]} | undefined;
+    if (message_request.whisper_to_user_ids || message_request.whisper_to_group_ids) {
+        whisper_recipients = {};
+        if (message_request.whisper_to_user_ids) {
+            whisper_recipients.user_ids = JSON.parse(message_request.whisper_to_user_ids) as number[];
+        }
+        if (message_request.whisper_to_group_ids) {
+            whisper_recipients.group_ids = JSON.parse(message_request.whisper_to_group_ids) as number[];
+        }
+    }
+
     const raw_local_message: RawLocalMessage = {
         ...message_request,
         ...markdown.render(raw_content),
@@ -275,6 +288,7 @@ export function insert_local_message(
         is_me_message: false,
         topic_links: topic ? markdown.get_topic_links(topic) : [],
         reactions: [],
+        ...(whisper_recipients && {whisper_recipients}),
     };
 
     raw_local_message.display_recipient = build_display_recipient(raw_local_message);

@@ -44,8 +44,9 @@ export type SendMessageData = {
     locally_echoed?: boolean;
     draft_id: string;
     // Whisper fields for visibility-restricted messages (stream messages only)
-    whisper_to_user_ids?: number[];
-    whisper_to_group_ids?: number[];
+    // These are JSON-stringified arrays since the backend expects Json[list[int]]
+    whisper_to_user_ids?: string;
+    whisper_to_group_ids?: string;
 } & (
     | {
           type: "stream";
@@ -239,13 +240,14 @@ export let send_message = (): void => {
         };
 
         // Add whisper recipients if in whisper mode
+        // Note: The backend expects Json[list[int]], so we stringify the arrays
         if (compose_state.get_whisper_mode() && compose_state.has_whisper_recipients()) {
             const whisper_recipients = compose_state.get_whisper_recipients();
             if (whisper_recipients.user_ids.length > 0) {
-                message_data.whisper_to_user_ids = whisper_recipients.user_ids;
+                message_data.whisper_to_user_ids = JSON.stringify(whisper_recipients.user_ids);
             }
             if (whisper_recipients.group_ids.length > 0) {
-                message_data.whisper_to_group_ids = whisper_recipients.group_ids;
+                message_data.whisper_to_group_ids = JSON.stringify(whisper_recipients.group_ids);
             }
         }
     }

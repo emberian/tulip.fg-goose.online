@@ -7,8 +7,8 @@ import render_topic_typeahead_hint from "../templates/topic_typeahead_hint.hbs";
 import {MAX_ITEMS, Typeahead} from "./bootstrap_typeahead.ts";
 import type {TypeaheadInputElement} from "./bootstrap_typeahead.ts";
 import * as bot_command_store from "./bot_command_store.ts";
-import * as command_compose from "./command_compose.ts";
 import * as bulleted_numbered_list_util from "./bulleted_numbered_list_util.ts";
+import * as command_compose from "./command_compose.ts";
 import * as compose_pm_pill from "./compose_pm_pill.ts";
 import * as compose_state from "./compose_state.ts";
 import * as compose_ui from "./compose_ui.ts";
@@ -30,6 +30,7 @@ import * as settings_data from "./settings_data.ts";
 import {realm} from "./state_data.ts";
 import * as stream_data from "./stream_data.ts";
 import type {StreamPillData} from "./stream_pill.ts";
+import * as stream_puppets from "./stream_puppets.ts";
 import * as stream_topic_history from "./stream_topic_history.ts";
 import * as stream_topic_history_util from "./stream_topic_history_util.ts";
 import type * as sub_store from "./sub_store.ts";
@@ -37,7 +38,6 @@ import * as timerender from "./timerender.ts";
 import * as tippyjs from "./tippyjs.ts";
 import * as topic_link_util from "./topic_link_util.ts";
 import type {Emoji, EmojiSuggestion} from "./typeahead.ts";
-import * as stream_puppets from "./stream_puppets.ts";
 import * as typeahead from "./typeahead.ts";
 import * as typeahead_helper from "./typeahead_helper.ts";
 import type {UserOrMentionPillData} from "./typeahead_helper.ts";
@@ -590,6 +590,12 @@ export const slash_commands = [
         placeholder: $t({defaultMessage: "Task list"}),
         info: $t({defaultMessage: "Create a collaborative to-do list"}),
     },
+    {
+        text: $t({defaultMessage: "/whisper"}),
+        name: "whisper",
+        aliases: "",
+        info: $t({defaultMessage: "Send message visible only to specific recipients"}),
+    },
 ];
 
 export const all_slash_commands: SlashCommand[] = [...dev_only_slash_commands, ...slash_commands];
@@ -617,7 +623,7 @@ export function filter_and_sort_mentions(
         const sub = stream_data.get_sub_by_id(opts.stream_id);
         if (sub && (sub as {enable_puppet_mode?: boolean}).enable_puppet_mode) {
             // Trigger fetch if not already fetched (async, for future calls)
-            void stream_puppets.fetch_puppets_for_stream(opts.stream_id);
+            stream_puppets.fetch_puppets_for_stream(opts.stream_id);
 
             // Get cached puppets synchronously
             const puppets = stream_puppets.get_puppets_for_stream(opts.stream_id);
@@ -1384,6 +1390,26 @@ export function content_typeahead_selected(
                 // Return early - the command mode UI handles the rest
                 $textbox.val(beginning);
                 $textbox.caret(beginning.length);
+                return beginning;
+            }
+            // Special handling for /whisper - toggle whisper mode instead of inserting text
+            if (item.name === "whisper") {
+                // Whispers only work for stream messages
+                if (compose_state.get_message_type() !== "stream") {
+                    return beginning + rest;
+                }
+                // Clear the partial command from the textarea
+                beginning = beginning.slice(0, -token.length - 1);
+                rest = "";
+                $textbox.val(beginning);
+                $textbox.caret(beginning.length);
+                // Enable whisper mode and show UI
+                compose_state.set_whisper_mode(true);
+                const $whisper_row = $("#compose-whisper-recipient");
+                const $whisper_toggle = $(".compose_whisper_toggle");
+                $whisper_row.show();
+                $whisper_toggle.addClass("active");
+                $("#whisper_recipient").trigger("focus");
                 return beginning;
             }
             // Regular slash command (built-in or bot command without options)

@@ -192,3 +192,17 @@ export function set_from_group_ids(group_ids: number[]): void {
         }
     }
 }
+
+export function set_from_user_and_group_ids(user_ids: number[], group_ids: number[]): void {
+    if (!widget) {
+        return;
+    }
+    // Clear existing pills first
+    widget.clear();
+    // Add users
+    set_from_user_ids(user_ids);
+    // Add groups
+    set_from_group_ids(group_ids);
+    // Update compose state
+    compose_state.set_whisper_recipients(user_ids, group_ids);
+}

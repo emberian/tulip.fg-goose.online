@@ -857,10 +857,11 @@ export class MessageListView {
                 include_sender,
             );
 
-            // Check if this is a whisper message
-            const is_whisper = message.whisper_recipients !== undefined;
+            // Check if this is a whisper message (whisper_recipients is set and not null)
+            const is_whisper =
+                message.whisper_recipients !== undefined && message.whisper_recipients !== null;
             let whisper_recipients_text: string | undefined;
-            if (is_whisper && message.whisper_recipients) {
+            if (is_whisper) {
                 // Build a display string for whisper recipients
                 const recipient_parts: string[] = [];
                 if (message.whisper_recipients.user_ids?.length) {
