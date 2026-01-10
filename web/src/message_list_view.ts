@@ -160,27 +160,33 @@ function same_year(earlier_msg: Message | undefined, later_msg: Message | undefi
     );
 }
 
-function same_sender(a: MessageContainer | undefined, b: MessageContainer | undefined): boolean {
+// Helper to check if two messages are from the same "identity" (considering puppets/personas)
+function messages_same_identity(a: Message | undefined, b: Message | undefined): boolean {
     if (a === undefined || b === undefined) {
         return false;
     }
     // For puppet messages, compare by puppet_display_name instead of sender_id
-    const a_puppet = a.msg.puppet_display_name;
-    const b_puppet = b.msg.puppet_display_name;
-    if (a_puppet !== undefined || b_puppet !== undefined) {
-        // If either is a puppet message, they must both be puppet messages
-        // with the same puppet_display_name to be considered same sender
+    // Normalize null/undefined to null for consistent comparison
+    const a_puppet = a.puppet_display_name ?? null;
+    const b_puppet = b.puppet_display_name ?? null;
+    if (a_puppet !== null || b_puppet !== null) {
         return a_puppet === b_puppet;
     }
     // For persona messages, compare by persona_id instead of sender_id
-    const a_persona = a.msg.persona_id;
-    const b_persona = b.msg.persona_id;
-    if (a_persona !== undefined || b_persona !== undefined) {
-        // If either is a persona message, they must both be persona messages
-        // with the same persona_id to be considered same sender
+    // Normalize null/undefined to null for consistent comparison
+    const a_persona = a.persona_id ?? null;
+    const b_persona = b.persona_id ?? null;
+    if (a_persona !== null || b_persona !== null) {
         return a_persona === b_persona;
     }
-    return a.msg.sender_id === b.msg.sender_id;
+    return a.sender_id === b.sender_id;
+}
+
+function same_sender(a: MessageContainer | undefined, b: MessageContainer | undefined): boolean {
+    if (a === undefined || b === undefined) {
+        return false;
+    }
+    return messages_same_identity(a.msg, b.msg);
 }
 
 function same_recipient(a: MessageContainer | undefined, b: MessageContainer | undefined): boolean {
@@ -871,7 +877,7 @@ export class MessageListView {
                 prev_message_container &&
                 !prev_message_container.status_message &&
                 same_day(prev_message_container.msg, message) &&
-                prev_message_container.msg.sender_id === message.sender_id
+                messages_same_identity(prev_message_container.msg, message)
             ) {
                 include_sender = false;
             }

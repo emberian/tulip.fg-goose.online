@@ -5,6 +5,7 @@ import render_compose_persona_menu from "../templates/compose_persona_menu.hbs";
 import * as compose_state from "./compose_state.ts";
 import * as personas from "./personas.ts";
 import * as popover_menus from "./popover_menus.ts";
+import * as ui_util from "./ui_util.ts";
 
 export function get_current_persona_id(): number | null {
     return personas.get_compose_persona_id();
@@ -131,12 +132,14 @@ function show_persona_menu(reference_element: HTMLElement): void {
     const html = render_compose_persona_menu({personas: menu_items});
 
     popover_menus.toggle_popover_menu(reference_element, {
-        popperOptions: {
-            placement: "top-start",
+        theme: "popover-menu",
+        placement: "top-start",
+        onCreate(instance) {
+            instance.setContent(ui_util.parse_html(html));
+            $(instance.popper).addClass("persona-menu-popover");
         },
         onShow(instance) {
             const $content = $(instance.popper);
-            $content.find(".persona-menu-content").html(html);
 
             $content.on("click", ".persona-menu-item", function (e) {
                 e.preventDefault();
@@ -209,8 +212,8 @@ export function initialize(): void {
         // Don't reset - keep the sticky selection
     });
 
-    // Update selector when stream changes
-    $(document).on("narrow_changed.zulip", () => {
+    // Update selector when compose is started or stream changes
+    $(document).on("compose_started.zulip narrow_changed.zulip", () => {
         const stream_id = compose_state.stream_id();
         update_for_stream(stream_id);
     });

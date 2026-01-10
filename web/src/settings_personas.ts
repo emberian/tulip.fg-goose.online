@@ -11,6 +11,9 @@ import * as personas from "./personas.ts";
 import type {MyPersona} from "./personas.ts";
 import * as timerender from "./timerender.ts";
 
+// Default color for personas when no color is set (Tailwind gray-500)
+const DEFAULT_PERSONA_COLOR = "#6b7280";
+
 export let loaded = false;
 
 type CharacterItem = {
@@ -78,7 +81,7 @@ function open_add_character_modal(): void {
         is_editing: false,
         name: "",
         avatar_url: "",
-        color: "#6b7280",
+        color: DEFAULT_PERSONA_COLOR,
         bio: "",
     });
 
@@ -106,7 +109,7 @@ function open_edit_character_modal(persona_id: number): void {
         id: persona.id,
         name: persona.name,
         avatar_url: persona.avatar_url ?? "",
-        color: persona.color ?? "#6b7280",
+        color: persona.color ?? DEFAULT_PERSONA_COLOR,
         bio: persona.bio,
     });
 
@@ -127,16 +130,16 @@ function submit_character_form(): void {
     const name = $form.find("#character-name").val() as string;
     const avatar_url = ($form.find("#character-avatar-url").val() as string) || null;
     const color_input = $form.find("#character-color").val() as string;
-    const color = color_input && color_input !== "#6b7280" ? color_input : null;
+    const color = color_input && color_input !== DEFAULT_PERSONA_COLOR ? color_input : null;
     const bio = $form.find("#character-bio").val() as string;
     const persona_id = $form.find("#character-id").val() as string;
 
     const data: Record<string, unknown> = {name, bio};
     if (avatar_url) {
-        data.avatar_url = avatar_url;
+        data["avatar_url"] = avatar_url;
     }
     if (color) {
-        data.color = color;
+        data["color"] = color;
     }
 
     if (persona_id) {
@@ -191,14 +194,17 @@ export function set_up(): void {
     // Fetch personas and populate list when ready
     personas.fetch_my_personas(populate_list);
 
+    // Use namespaced events to allow removing them in reset()
     // Add character button
-    $("body").on("click", "#add-new-character-button", (e) => {
+    $("body").off("click.settings_personas", "#add-new-character-button");
+    $("body").on("click.settings_personas", "#add-new-character-button", (e) => {
         e.preventDefault();
         open_add_character_modal();
     });
 
     // Edit character button
-    $("body").on("click", ".edit-character-button", function (e) {
+    $("body").off("click.settings_personas", ".edit-character-button");
+    $("body").on("click.settings_personas", ".edit-character-button", function (e) {
         e.preventDefault();
         const $row = $(this).closest("tr");
         const persona_id = Number.parseInt($row.attr("data-persona-id")!, 10);
@@ -206,7 +212,8 @@ export function set_up(): void {
     });
 
     // Delete character button
-    $("body").on("click", ".delete-character-button", function (e) {
+    $("body").off("click.settings_personas", ".delete-character-button");
+    $("body").on("click.settings_personas", ".delete-character-button", function (e) {
         e.preventDefault();
         const $row = $(this).closest("tr");
         const persona_id = Number.parseInt($row.attr("data-persona-id")!, 10);
@@ -214,9 +221,10 @@ export function set_up(): void {
     });
 
     // Clear color button in modal
-    $("body").on("click", ".clear-color-button", function (e) {
+    $("body").off("click.settings_personas", ".clear-color-button");
+    $("body").on("click.settings_personas", ".clear-color-button", function (e) {
         e.preventDefault();
-        $(this).siblings("#character-color").val("#6b7280");
+        $(this).siblings("#character-color").val(DEFAULT_PERSONA_COLOR);
     });
 }
 
@@ -224,4 +232,6 @@ export function reset(): void {
     loaded = false;
     list_widget = undefined;
     personas.unregister_change_callback(on_personas_changed);
+    // Remove namespaced event handlers
+    $("body").off("click.settings_personas");
 }

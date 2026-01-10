@@ -98,6 +98,12 @@
                         <span class="popover-menu-label">{{t 'Settings' }}</span>
                     </a>
                 </li>
+                <li role="none" class="link-item popover-menu-list-item">
+                    <a role="menuitem" href="/theater/" class="popover-menu-link">
+                        <i class="popover-menu-icon zulip-icon zulip-icon-drama" aria-hidden="true"></i>
+                        <span class="popover-menu-label">{{t 'Theater Mode' }}</span>
+                    </a>
+                </li>
                 <li role="none" class="popover-menu-list-item">
                     <div role="group" class="tab-picker popover-menu-tab-group" aria-label="{{t 'App theme' }}">
                         <input type="radio" id="select-automatic-theme" class="tab-option" name="theme-select" data-theme-code="{{color_scheme_values.automatic.code}}" {{#if (eq user_color_scheme color_scheme_values.automatic.code)}}checked{{/if}} />

@@ -75,6 +75,7 @@ from zerver.views.drafts import create_drafts, delete_draft, edit_draft, fetch_d
 from zerver.views.events_register import events_register_backend
 from zerver.views.health import health
 from zerver.views.home import accounts_accept_terms, desktop_home, doc_permalinks_view, home
+from zerver.views.theater import theater_view
 from zerver.views.invite import (
     generate_multiuse_invite_backend,
     get_user_invites,
@@ -667,6 +668,8 @@ i18n_urls = [
     # to not log in in the future. We don't want to require a new
     # desktop app build for everyone in that case
     path("desktop_home/", desktop_home),
+    # Theater Mode - immersive RP frontend
+    path("theater/", theater_view, name="theater"),
     # Backwards-compatibility (legacy) Google auth URL for the mobile
     # apps; see https://github.com/zulip/zulip/issues/13081 for
     # background.  We can remove this once older versions of the

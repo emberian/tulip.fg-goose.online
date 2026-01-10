@@ -2733,7 +2733,12 @@ def do_convert(
         # Get puppet names for the stream if this is a stream message with puppet mode enabled
         sending_stream_id: int | None = None
         puppet_names: set[str] | None = None
-        if message is not None and message.recipient.type == Recipient.STREAM:
+        # Check if message has a recipient - in preview mode the recipient may not be set
+        if (
+            message is not None
+            and message.recipient_id is not None
+            and message.recipient.type == Recipient.STREAM
+        ):
             sending_stream_id = message.recipient.type_id
             from zerver.models.streams import Stream, StreamPuppet
 

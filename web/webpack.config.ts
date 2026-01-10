@@ -127,6 +127,26 @@ const config = (
                     include: [path.resolve(import.meta.dirname, "src")],
                     loader: "babel-loader",
                 },
+                // Svelte components
+                {
+                    test: /\.svelte$/,
+                    use: {
+                        loader: "svelte-loader",
+                        options: {
+                            compilerOptions: {
+                                dev: !production,
+                            },
+                            emitCss: production,
+                        },
+                    },
+                },
+                // Handle Svelte internal imports
+                {
+                    test: /node_modules\/svelte\/.*\.m?js$/,
+                    resolve: {
+                        fullySpecified: false,
+                    },
+                },
                 // regular css files
                 {
                     test: /\.css$/,
@@ -199,6 +219,11 @@ const config = (
                     type: "asset/resource",
                 },
             ],
+        },
+        resolve: {
+            extensions: [".mjs", ".js", ".ts", ".svelte"],
+            mainFields: ["svelte", "browser", "module", "main"],
+            conditionNames: ["svelte", "browser", "import"],
         },
         output: {
             path: path.resolve(import.meta.dirname, "../static/webpack-bundles"),

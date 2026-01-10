@@ -25,6 +25,7 @@ import * as message_store from "./message_store.ts";
 import type {DisplayRecipientUser, Message, MessageReaction, RawMessage} from "./message_store.ts";
 import * as message_util from "./message_util.ts";
 import * as people from "./people.ts";
+import * as personas from "./personas.ts";
 import * as pm_list from "./pm_list.ts";
 import * as recent_view_data from "./recent_view_data.ts";
 import * as rows from "./rows.ts";
@@ -101,6 +102,10 @@ export type RawLocalMessage = MessageRequestObject & {
     reactions: MessageReaction[];
     draft_id: string;
     whisper_recipients?: {user_ids?: number[]; group_ids?: number[]} | null;
+    persona_id?: number;
+    persona_display_name?: string;
+    persona_avatar_url?: string;
+    persona_color?: string;
 } & (StreamMessageObject | PrivateMessageObject);
 
 export type PostMessageAPIData = z.output<typeof send_message_api_response_schema>;
@@ -288,14 +293,38 @@ export function insert_local_message(
         }
     }
 
+    // Check if sending as a persona
+    let sender_full_name = people.my_full_name();
+    let avatar_url = people.small_avatar_url_for_person(current_user);
+    let persona_id: number | undefined;
+    let persona_display_name: string | undefined;
+    let persona_avatar_url: string | undefined;
+    let persona_color: string | undefined;
+
+    if (message_request.persona_id !== undefined) {
+        const my_personas = personas.get_my_personas();
+        const persona = my_personas.find((p) => p.id === message_request.persona_id);
+        if (persona) {
+            persona_id = persona.id;
+            persona_display_name = persona.name;
+            persona_avatar_url = persona.avatar_url ?? undefined;
+            persona_color = persona.color ?? undefined;
+            // Use persona name and avatar for display
+            sender_full_name = persona.name;
+            if (persona.avatar_url) {
+                avatar_url = persona.avatar_url;
+            }
+        }
+    }
+
     const raw_local_message: RawLocalMessage = {
         ...message_request,
         ...markdown.render(raw_content),
         raw_content,
         content_type: "text/html",
         sender_email: people.my_current_email(),
-        sender_full_name: people.my_full_name(),
-        avatar_url: people.small_avatar_url_for_person(current_user),
+        sender_full_name,
+        avatar_url,
         timestamp: Date.now() / 1000,
         local_id: local_id_float.toString(),
         locally_echoed: true,
@@ -305,6 +334,14 @@ export function insert_local_message(
         topic_links: topic ? markdown.get_topic_links(topic) : [],
         reactions: [],
         ...(whisper_recipients && {whisper_recipients}),
+        ...(persona_id !== undefined && {
+            persona_id,
+            // persona_display_name is guaranteed to be set when persona_id is set
+            persona_display_name: persona_display_name!,
+            // avatar_url and color are optional on personas
+            ...(persona_avatar_url !== undefined && {persona_avatar_url}),
+            ...(persona_color !== undefined && {persona_color}),
+        }),
     };
 
     raw_local_message.display_recipient = build_display_recipient(raw_local_message);

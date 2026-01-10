@@ -89,7 +89,11 @@ export function process_new_message(opts: NewMessage): ProcessedMessage {
     let status_emoji_info;
     const sender = people.maybe_get_user_by_id(message_with_booleans.message.sender_id);
     if (sender) {
-        message_with_booleans.message.sender_full_name = sender.full_name;
+        // Don't override sender_full_name for persona messages - the server
+        // already set it to the persona name
+        if (!message_with_booleans.message.persona_display_name) {
+            message_with_booleans.message.sender_full_name = sender.full_name;
+        }
         message_with_booleans.message.sender_email = sender.email;
         status_emoji_info = user_status.get_status_emoji(message_with_booleans.message.sender_id);
     }

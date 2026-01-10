@@ -506,6 +506,7 @@
 /* Persona selector for posting as a character */
 .compose-persona-selector {
     margin-bottom: 4px;
+    max-width: 100%;
 }
 
 .persona-selector-button {
@@ -518,8 +519,9 @@
     background: var(--color-background-compose-embedded-button-hover);
     cursor: pointer;
     font-size: 0.85em;
-    max-width: 150px;
+    max-width: 100%;
     overflow: hidden;
+    box-sizing: border-box;
 
     &:hover {
         border-color: var(--color-border-input-focus);
@@ -527,7 +529,7 @@
 
     &.using-persona {
         border-color: hsl(40deg 60% 50%);
-        background: hsl(40deg 60% 95%);
+        background: light-dark(hsl(40deg 60% 95%), hsl(40deg 40% 28%));
     }
 
     .persona-avatar {
@@ -601,7 +603,7 @@
     }
 
     &.selected {
-        background: hsl(40deg 60% 95%);
+        background: light-dark(hsl(40deg 60% 95%), hsl(40deg 40% 28%));
     }
 
     .persona-avatar {
