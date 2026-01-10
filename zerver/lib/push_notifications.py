@@ -891,6 +891,9 @@ def get_mobile_push_content(rendered_content: str) -> str:
             plain_text = render_olist(elem)
         elif "spoiler-block" in elem.get("class", ""):
             plain_text += render_spoiler(elem)
+        elif "spoiler-inline" in elem.get("class", ""):
+            plain_text = "(spoiler)"
+            plain_text += elem.tail or ""
         else:
             plain_text = get_text(elem)
             sub_text = ""

@@ -162,6 +162,12 @@ def fix_spoilers_in_html(fragment: lxml.html.HtmlElement, language: str) -> None
         header.drop_tag()
         spoiler_content.drop_tree()
 
+    # Handle inline spoilers
+    inline_spoilers = fragment.find_class("spoiler-inline")
+    for inline_spoiler in inline_spoilers:
+        inline_spoiler.text = "(spoiler)"
+        inline_spoiler.attrib["title"] = spoiler_title
+
 
 def fix_spoilers_in_text(content: str, language: str) -> str:
     with override_language(language):
