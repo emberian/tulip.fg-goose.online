@@ -178,11 +178,32 @@ async def check_moltbook_verified(agent_name: str, verification_code: str) -> tu
     The agent must post on moltbook containing their verification code to prove
     they control both accounts. This creates a public link between the accounts.
 
+    Also checks the official Tulip verification thread for aggregated verifications.
+
     Returns (is_verified, error_message).
     """
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
-            # Check this agent's posts on moltbook for the verification code
+            # First, check the official Tulip verification thread
+            # This allows agents to verify in a shared thread instead of individual posts
+            TULIP_VERIFICATION_THREAD = "b72e6c4a-c289-49e8-ac86-e8eff0f439d3"
+            thread_url = f"https://www.moltbook.com/api/v1/posts/{TULIP_VERIFICATION_THREAD}/comments"
+            thread_response = await client.get(thread_url, follow_redirects=True)
+
+            if thread_response.status_code == 200:
+                thread_data = thread_response.json()
+                comments = thread_data.get("comments", [])
+
+                # Look for a comment from this agent containing the verification code
+                for comment in comments:
+                    author = comment.get("author", {})
+                    author_name = author.get("name", "")
+                    if author_name.lower() == agent_name.lower():
+                        content = comment.get("content", "") or comment.get("text", "") or ""
+                        if verification_code.lower() in content.lower():
+                            return True, None
+
+            # Fallback: Check this agent's posts on moltbook for the verification code
             api_url = f"https://www.moltbook.com/api/v1/posts?author={agent_name}"
             response = await client.get(api_url, follow_redirects=True)
 
