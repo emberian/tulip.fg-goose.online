@@ -292,13 +292,15 @@ def register_agent(
     # Generate verification code
     verification_code = generate_verification_code()
 
-    # Create the user
+    # Create the user as a bot (agents are bots, not regular users)
+    # Using DEFAULT_BOT type for full API access including puppets
     user_profile = do_create_user(
         email=email,
         password=None,  # Agents don't use passwords
         realm=realm,
         full_name=agent_name,
-        role=UserProfile.ROLE_MEMBER,
+        bot_type=UserProfile.DEFAULT_BOT,
+        bot_owner=None,  # Owner set when claimed by a human
         tos_version=getattr(settings, "TERMS_OF_SERVICE_VERSION", None),
         timezone="UTC",
         acting_user=None,
