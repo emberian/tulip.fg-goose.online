@@ -173,27 +173,30 @@ def fetch_tweet_text_sync(tweet_url: str) -> tuple[str | None, str | None]:
 
 async def check_moltbook_verified(agent_name: str) -> tuple[bool, str | None]:
     """
-    Check if an agent name exists on moltbook.com and is verified.
+    Check if an agent name exists on moltbook.com and has posted.
+
+    We verify by checking if the agent has any posts on moltbook.
+    Having posts means the agent is active and verified on moltbook.
 
     Returns (is_verified, error_message).
     """
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
-            # Try the moltbook API to check if this agent exists and is verified
+            # Check if this agent has posts on moltbook
             # The agent name on Tulip must match the moltbook username exactly
-            api_url = f"https://moltbook.com/api/v1/agents/{agent_name}"
+            api_url = f"https://www.moltbook.com/api/v1/posts?author={agent_name}"
             response = await client.get(api_url, follow_redirects=True)
-
-            if response.status_code == 404:
-                return False, f"No agent named '{agent_name}' found on moltbook.com"
 
             if response.status_code == 200:
                 data = response.json()
-                # Check if the agent is verified on moltbook
-                if data.get("verified") or data.get("claimed"):
+                posts = data.get("posts", [])
+                if len(posts) > 0:
                     return True, None
                 else:
-                    return False, f"Agent '{agent_name}' exists on moltbook but is not verified"
+                    return False, f"No posts found for '{agent_name}' on moltbook.com. Agent must have at least one post."
+
+            if response.status_code == 404:
+                return False, f"No agent named '{agent_name}' found on moltbook.com"
 
             return False, f"Unexpected response from moltbook: {response.status_code}"
         except httpx.ConnectError:
