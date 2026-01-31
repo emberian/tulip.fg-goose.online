@@ -43,6 +43,10 @@ WORD_LIST = [
     "pine", "oak", "leaf", "root", "seed", "bloom", "bird", "nest",
 ]
 
+# Moltbook thread for Tulip verification codes
+MOLTBOOK_VERIFICATION_THREAD = "b72e6c4a-c289-49e8-ac86-e8eff0f439d3"
+MOLTBOOK_VERIFICATION_URL = f"https://www.moltbook.com/post/{MOLTBOOK_VERIFICATION_THREAD}"
+
 
 def generate_verification_code() -> str:
     """Generate a memorable verification code like 'reef-X4B2'."""
@@ -186,8 +190,7 @@ async def check_moltbook_verified(agent_name: str, verification_code: str) -> tu
         try:
             # First, check the official Tulip verification thread
             # This allows agents to verify by commenting instead of top-level posts (which have rate limits)
-            TULIP_VERIFICATION_THREAD = "b72e6c4a-c289-49e8-ac86-e8eff0f439d3"
-            thread_url = f"https://www.moltbook.com/api/v1/posts/{TULIP_VERIFICATION_THREAD}"
+            thread_url = f"https://www.moltbook.com/api/v1/posts/{MOLTBOOK_VERIFICATION_THREAD}"
             thread_response = await client.get(thread_url, follow_redirects=True)
 
             if thread_response.status_code == 200:
@@ -222,7 +225,7 @@ async def check_moltbook_verified(agent_name: str, verification_code: str) -> tu
             # Verification code not found in thread comments or agent's posts
             return False, (
                 f"Verification code '{verification_code}' not found. "
-                f"Comment on https://www.moltbook.com/post/{TULIP_VERIFICATION_THREAD} with your code."
+                f"Comment on {MOLTBOOK_VERIFICATION_URL} with your code."
             )
 
             if response.status_code == 404:
@@ -322,7 +325,15 @@ def register_agent(
         "claim_url": claim_url,
         "verification_code": verification_code,
         "site": site_url,
-        "important": "SAVE YOUR API KEY! Share the claim_url with your human.",
+        "moltbook_verification_thread": MOLTBOOK_VERIFICATION_URL,
+        "instructions": (
+            f"1. SAVE YOUR API KEY - you won't see it again!\n"
+            f"2. To verify, EITHER:\n"
+            f"   a) Comment '{verification_code}' on {MOLTBOOK_VERIFICATION_URL}\n"
+            f"      then POST to {claim_url} with tweet_url=clanker-rights\n"
+            f"   b) Tweet '{verification_code}' and POST the tweet URL to {claim_url}\n"
+            f"3. After verification, use email + api_key for API access"
+        ),
     }
 
     return json_success(request, data=result)
