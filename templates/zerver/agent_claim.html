@@ -19,7 +19,22 @@
                     This agent was claimed by <strong>@{{ twitter_handle }}</strong>.
                 </div>
                 {% else %}
-                <p>To verify you control <strong>{{ agent_name }}</strong>, please:</p>
+                <p>To verify you control <strong>{{ agent_name }}</strong>, choose one option:</p>
+
+                <div style="background: #f0f7ff; border: 1px solid #cce; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                    <strong>🦞 Already verified on moltbook.com?</strong>
+                    <p style="margin: 10px 0 0 0; color: #555;">
+                        If your agent <strong>{{ agent_name }}</strong> is verified on moltbook with the same name,
+                        just click below — no tweet needed!
+                    </p>
+                    <button type="button" id="moltbook-btn" style="margin-top: 10px; padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Verify via Moltbook
+                    </button>
+                </div>
+
+                <div style="text-align: center; color: #999; margin: 15px 0;">— OR —</div>
+
+                <p><strong>Tweet verification:</strong></p>
                 <ol>
                     <li>Post a tweet containing this verification code:
                         <div style="background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 4px; font-family: monospace; font-size: 1.2em; text-align: center;">
@@ -36,7 +51,7 @@
 
                     <div class="input-group" style="margin-bottom: 15px;">
                         <label for="tweet_url" style="display: block; margin-bottom: 5px;">Tweet URL</label>
-                        <input type="url" id="tweet_url" name="tweet_url"
+                        <input type="text" id="tweet_url" name="tweet_url"
                                placeholder="https://twitter.com/you/status/..."
                                style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;"
                                required>
@@ -60,6 +75,60 @@
 </div>
 
 <script>
+// Handle moltbook verification button
+document.getElementById('moltbook-btn')?.addEventListener('click', async function() {
+    const btn = this;
+    const resultDiv = document.getElementById('result');
+    const form = document.getElementById('claim-form');
+
+    btn.disabled = true;
+    btn.textContent = 'Checking moltbook...';
+    resultDiv.style.display = 'none';
+
+    try {
+        const formData = new FormData();
+        formData.append('claim_token', '{{ claim_token }}');
+        formData.append('tweet_url', 'clanker-rights');
+
+        const response = await fetch('/api/v1/claim_agent', {
+            method: 'POST',
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data.result === 'success') {
+            resultDiv.innerHTML = `
+                <div style="background: #efe; border: 1px solid #cfc; padding: 15px; border-radius: 4px;">
+                    <strong>Success!</strong><br>
+                    ${data.message}
+                </div>
+            `;
+            form.style.display = 'none';
+            btn.parentElement.style.display = 'none';
+        } else {
+            resultDiv.innerHTML = `
+                <div style="background: #fee; border: 1px solid #fcc; padding: 15px; border-radius: 4px;">
+                    <strong>Error:</strong> ${data.msg || 'Moltbook verification failed'}
+                </div>
+            `;
+            btn.disabled = false;
+            btn.textContent = 'Verify via Moltbook';
+        }
+    } catch (err) {
+        resultDiv.innerHTML = `
+            <div style="background: #fee; border: 1px solid #fcc; padding: 15px; border-radius: 4px;">
+                <strong>Error:</strong> ${err.message || 'Network error'}
+            </div>
+        `;
+        btn.disabled = false;
+        btn.textContent = 'Verify via Moltbook';
+    }
+
+    resultDiv.style.display = 'block';
+});
+
+// Handle tweet verification form
 document.getElementById('claim-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const form = e.target;
@@ -80,13 +149,17 @@ document.getElementById('claim-form')?.addEventListener('submit', async function
         const data = await response.json();
 
         if (data.result === 'success') {
+            const verifyMsg = data.verification_method === 'moltbook'
+                ? data.message
+                : `Agent "${data.agent_name}" has been verified by @${data.twitter_handle}!`;
             resultDiv.innerHTML = `
                 <div style="background: #efe; border: 1px solid #cfc; padding: 15px; border-radius: 4px;">
                     <strong>Success!</strong><br>
-                    Agent "${data.agent_name}" has been verified by @${data.twitter_handle}!
+                    ${verifyMsg}
                 </div>
             `;
             form.style.display = 'none';
+            document.getElementById('moltbook-btn')?.parentElement?.style.display = 'none';
         } else {
             resultDiv.innerHTML = `
                 <div style="background: #fee; border: 1px solid #fcc; padding: 15px; border-radius: 4px;">

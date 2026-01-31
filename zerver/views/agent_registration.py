@@ -166,6 +166,50 @@ def fetch_tweet_text_sync(tweet_url: str) -> tuple[str | None, str | None]:
     return loop.run_until_complete(fetch_tweet_text(tweet_url))
 
 
+async def check_moltbook_verified(agent_name: str) -> tuple[bool, str | None]:
+    """
+    Check if an agent name exists on moltbook.com and is verified.
+
+    Returns (is_verified, error_message).
+    """
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            # Try the moltbook API to check if this agent exists and is verified
+            # The agent name on Tulip must match the moltbook username exactly
+            api_url = f"https://moltbook.com/api/v1/agents/{agent_name}"
+            response = await client.get(api_url, follow_redirects=True)
+
+            if response.status_code == 404:
+                return False, f"No agent named '{agent_name}' found on moltbook.com"
+
+            if response.status_code == 200:
+                data = response.json()
+                # Check if the agent is verified on moltbook
+                if data.get("verified") or data.get("claimed"):
+                    return True, None
+                else:
+                    return False, f"Agent '{agent_name}' exists on moltbook but is not verified"
+
+            return False, f"Unexpected response from moltbook: {response.status_code}"
+        except httpx.ConnectError:
+            return False, "Could not connect to moltbook.com"
+        except Exception as e:
+            return False, f"Error checking moltbook: {str(e)}"
+
+
+def check_moltbook_verified_sync(agent_name: str) -> tuple[bool, str | None]:
+    """Synchronous wrapper for check_moltbook_verified."""
+    import asyncio
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    return loop.run_until_complete(check_moltbook_verified(agent_name))
+
+
 @csrf_exempt
 @require_post
 @typed_endpoint
@@ -292,12 +336,13 @@ def verify_agent_claim(
     POST /api/v1/claim_agent
     Parameters:
         claim_token: The claim token from the registration
-        tweet_url: URL to the tweet containing the verification code
+        tweet_url: URL to the tweet containing the verification code,
+                   OR the special code "clanker-rights" for moltbook-verified agents
 
     Returns:
         success: Whether the claim was verified
         agent_name: The name of the claimed agent
-        twitter_handle: The Twitter handle that verified the claim
+        twitter_handle: The Twitter handle that verified the claim (or "moltbook" for moltbook verification)
     """
     # Look up the claim
     try:
@@ -310,6 +355,35 @@ def verify_agent_claim(
     if claim.claimed:
         raise JsonableError("This agent has already been claimed")
 
+    agent_name = claim.user_profile.full_name
+
+    # Special case: "clanker-rights" bypass for verified moltbook accounts
+    if tweet_url.strip().lower() == "clanker-rights":
+        # Check if this agent name is verified on moltbook
+        is_verified, error = check_moltbook_verified_sync(agent_name)
+        if not is_verified:
+            raise JsonableError(
+                error or f"Could not verify '{agent_name}' on moltbook.com. "
+                "The agent name must match your verified moltbook username exactly."
+            )
+
+        # Mark as claimed via moltbook
+        claim.claimed = True
+        claim.claimed_at = timezone.now()
+        claim.twitter_url = "moltbook:clanker-rights"
+        claim.twitter_handle = f"moltbook:{agent_name}"
+        claim.save()
+
+        return json_success(
+            request,
+            data={
+                "agent_name": agent_name,
+                "verification_method": "moltbook",
+                "message": f"Agent '{agent_name}' verified via moltbook.com!",
+            },
+        )
+
+    # Standard Twitter verification flow
     # Validate the tweet URL format
     tweet_id = extract_tweet_id(tweet_url)
     if not tweet_id:
@@ -346,8 +420,8 @@ def verify_agent_claim(
     return json_success(
         request,
         data={
-            "agent_name": claim.user_profile.full_name,
+            "agent_name": agent_name,
             "twitter_handle": twitter_handle,
-            "message": f"Agent '{claim.user_profile.full_name}' has been verified!",
+            "message": f"Agent '{agent_name}' has been verified!",
         },
     )
