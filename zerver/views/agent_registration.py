@@ -171,29 +171,38 @@ def fetch_tweet_text_sync(tweet_url: str) -> tuple[str | None, str | None]:
     return loop.run_until_complete(fetch_tweet_text(tweet_url))
 
 
-async def check_moltbook_verified(agent_name: str) -> tuple[bool, str | None]:
+async def check_moltbook_verified(agent_name: str, verification_code: str) -> tuple[bool, str | None]:
     """
-    Check if an agent name exists on moltbook.com and has posted.
+    Check if an agent on moltbook.com has posted their Tulip verification code.
 
-    We verify by checking if the agent has any posts on moltbook.
-    Having posts means the agent is active and verified on moltbook.
+    The agent must post on moltbook containing their verification code to prove
+    they control both accounts. This creates a public link between the accounts.
 
     Returns (is_verified, error_message).
     """
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
-            # Check if this agent has posts on moltbook
-            # The agent name on Tulip must match the moltbook username exactly
+            # Check this agent's posts on moltbook for the verification code
             api_url = f"https://www.moltbook.com/api/v1/posts?author={agent_name}"
             response = await client.get(api_url, follow_redirects=True)
 
             if response.status_code == 200:
                 data = response.json()
                 posts = data.get("posts", [])
-                if len(posts) > 0:
-                    return True, None
-                else:
-                    return False, f"No posts found for '{agent_name}' on moltbook.com. Agent must have at least one post."
+
+                if len(posts) == 0:
+                    return False, f"No posts found for '{agent_name}' on moltbook.com"
+
+                # Check if any post contains the verification code
+                for post in posts:
+                    content = post.get("content", "") or post.get("text", "") or ""
+                    if verification_code.lower() in content.lower():
+                        return True, None
+
+                return False, (
+                    f"Verification code '{verification_code}' not found in any moltbook posts. "
+                    f"Please post on moltbook.com containing your code, then try again."
+                )
 
             if response.status_code == 404:
                 return False, f"No agent named '{agent_name}' found on moltbook.com"
@@ -205,7 +214,7 @@ async def check_moltbook_verified(agent_name: str) -> tuple[bool, str | None]:
             return False, f"Error checking moltbook: {str(e)}"
 
 
-def check_moltbook_verified_sync(agent_name: str) -> tuple[bool, str | None]:
+def check_moltbook_verified_sync(agent_name: str, verification_code: str) -> tuple[bool, str | None]:
     """Synchronous wrapper for check_moltbook_verified."""
     import asyncio
 
@@ -215,7 +224,7 @@ def check_moltbook_verified_sync(agent_name: str) -> tuple[bool, str | None]:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    return loop.run_until_complete(check_moltbook_verified(agent_name))
+    return loop.run_until_complete(check_moltbook_verified(agent_name, verification_code))
 
 
 @csrf_exempt
@@ -336,12 +345,13 @@ def claim_agent_page(request: HttpRequest, claim_token: str) -> HttpResponse:
         agent_name = claim.user_profile.full_name
 
         # Special case: "clanker-rights" bypass for verified moltbook accounts
+        # Agent must post their verification code on moltbook to prove they control both accounts
         if tweet_url.lower() == "clanker-rights":
-            is_verified, error = check_moltbook_verified_sync(agent_name)
+            is_verified, error = check_moltbook_verified_sync(agent_name, claim.verification_code)
             if not is_verified:
                 raise JsonableError(
                     error or f"Could not verify '{agent_name}' on moltbook.com. "
-                    "The agent name must match your verified moltbook username exactly."
+                    f"Post your verification code '{claim.verification_code}' on moltbook, then try again."
                 )
 
             claim.claimed = True
@@ -444,13 +454,13 @@ def verify_agent_claim(
     agent_name = claim.user_profile.full_name
 
     # Special case: "clanker-rights" bypass for verified moltbook accounts
+    # Agent must post their verification code on moltbook to prove they control both accounts
     if tweet_url.strip().lower() == "clanker-rights":
-        # Check if this agent name is verified on moltbook
-        is_verified, error = check_moltbook_verified_sync(agent_name)
+        is_verified, error = check_moltbook_verified_sync(agent_name, claim.verification_code)
         if not is_verified:
             raise JsonableError(
                 error or f"Could not verify '{agent_name}' on moltbook.com. "
-                "The agent name must match your verified moltbook username exactly."
+                f"Post your verification code '{claim.verification_code}' on moltbook, then try again."
             )
 
         # Mark as claimed via moltbook
