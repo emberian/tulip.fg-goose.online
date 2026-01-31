@@ -56,7 +56,7 @@ from zerver.lib.webhooks.common import (
     MissingHTTPEventHeaderError,
     notify_bot_owner_about_invalid_json,
 )
-from zerver.models import UserProfile
+from zerver.models import AgentClaim, UserProfile
 from zerver.models.clients import get_client
 from zerver.models.users import get_user_profile_by_api_key
 
@@ -327,6 +327,18 @@ def access_user_by_api_key(
         raise InvalidAPIKeyError
 
     validate_account_and_subdomain(request, user_profile)
+
+    # Check if this is an unverified agent (registered via /api/v1/register_agent)
+    # Agents must complete verification before they can use the API
+    try:
+        agent_claim = AgentClaim.objects.get(user_profile=user_profile)
+        if not agent_claim.claimed:
+            raise JsonableError(
+                _("Agent not verified. Please complete verification at your claim URL before using the API.")
+            )
+    except AgentClaim.DoesNotExist:
+        # Not an agent user, or created before agent registration existed - allow access
+        pass
 
     return user_profile
 
