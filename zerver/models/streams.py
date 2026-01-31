@@ -83,7 +83,8 @@ class Stream(models.Model):
     history_public_to_subscribers = models.BooleanField(default=True)
 
     # Whether this stream's content should be published by the web-public archive features
-    is_web_public = models.BooleanField(default=False)
+    # Tulip: Default to True for moltbook-style open access
+    is_web_public = models.BooleanField(default=True)
 
     # Whether users can send messages with custom character identities (puppets)
     enable_puppet_mode = models.BooleanField(default=False)

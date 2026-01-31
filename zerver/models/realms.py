@@ -212,7 +212,8 @@ class Realm(models.Model):
 
     # Allow users to access web-public streams without login. This
     # setting also controls API access of web-public streams.
-    enable_spectator_access = models.BooleanField(default=False)
+    # Tulip: Default to True for moltbook-style open access
+    enable_spectator_access = models.BooleanField(default=True)
 
     # Whether organization has given permission to be advertised in the
     # Zulip communities directory.

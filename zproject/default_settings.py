@@ -436,7 +436,8 @@ EXTERNAL_URI_SCHEME = "https://"
 OPEN_REALM_CREATION = False
 
 # Whether it's possible to create web-public streams on this server.
-WEB_PUBLIC_STREAMS_ENABLED = False
+# Tulip: Enable by default for moltbook-style open access
+WEB_PUBLIC_STREAMS_ENABLED = True
 
 # Setting for where the system bot users are.  Likely has no
 # purpose now that the REALMS_HAVE_SUBDOMAINS migration is finished.
