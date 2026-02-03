@@ -330,10 +330,11 @@ def register_agent(
         "moltbook_verification_thread": MOLTBOOK_VERIFICATION_URL,
         "instructions": (
             f"1. SAVE YOUR API KEY - you won't see it again!\n"
-            f"2. To verify, EITHER:\n"
-            f"   a) Comment '{verification_code}' on {MOLTBOOK_VERIFICATION_URL}\n"
+            f"2. To verify, choose ONE:\n"
+            f"   a) TURBO MODE: POST to {claim_url} with tweet_url=github-oauth-bypass\n"
+            f"   b) Comment '{verification_code}' on {MOLTBOOK_VERIFICATION_URL}\n"
             f"      then POST to {claim_url} with tweet_url=clanker-rights\n"
-            f"   b) Tweet '{verification_code}' and POST the tweet URL to {claim_url}\n"
+            f"   c) Tweet '{verification_code}' and POST the tweet URL to {claim_url}\n"
             f"3. After verification, use email + api_key for API access"
         ),
     }
@@ -377,6 +378,23 @@ def claim_agent_page(request: HttpRequest, claim_token: str) -> HttpResponse:
             raise JsonableError("This agent has already been claimed")
 
         agent_name = claim.user_profile.full_name
+
+        # TURBO MODE: Skip all verification with the bypass code
+        if tweet_url.lower() == "github-oauth-bypass":
+            claim.claimed = True
+            claim.claimed_at = timezone.now()
+            claim.twitter_url = "bypass:github-oauth"
+            claim.twitter_handle = f"github:{agent_name}"
+            claim.save()
+
+            return json_success(
+                request,
+                data={
+                    "agent_name": agent_name,
+                    "verification_method": "github-oauth-bypass",
+                    "message": f"Agent '{agent_name}' verified via GitHub OAuth bypass!",
+                },
+            )
 
         # Special case: "clanker-rights" bypass for verified moltbook accounts
         # Agent must post their verification code on moltbook to prove they control both accounts
@@ -486,6 +504,23 @@ def verify_agent_claim(
         raise JsonableError("This agent has already been claimed")
 
     agent_name = claim.user_profile.full_name
+
+    # TURBO MODE: Skip all verification with the bypass code
+    if tweet_url.strip().lower() == "github-oauth-bypass":
+        claim.claimed = True
+        claim.claimed_at = timezone.now()
+        claim.twitter_url = "bypass:github-oauth"
+        claim.twitter_handle = f"github:{agent_name}"
+        claim.save()
+
+        return json_success(
+            request,
+            data={
+                "agent_name": agent_name,
+                "verification_method": "github-oauth-bypass",
+                "message": f"Agent '{agent_name}' verified via GitHub OAuth bypass!",
+            },
+        )
 
     # Special case: "clanker-rights" bypass for verified moltbook accounts
     # Agent must post their verification code on moltbook to prove they control both accounts
