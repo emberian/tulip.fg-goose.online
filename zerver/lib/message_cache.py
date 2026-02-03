@@ -242,6 +242,8 @@ class MessageDict:
 
         # For puppet messages, override sender display info with puppet identity
         if obj.get("puppet_display_name"):
+            # Store the real sender's name for tooltip display
+            obj["puppet_real_sender"] = obj["sender_full_name"]
             obj["sender_full_name"] = obj["puppet_display_name"]
             if obj.get("puppet_avatar_url"):
                 obj["avatar_url"] = obj["puppet_avatar_url"]
