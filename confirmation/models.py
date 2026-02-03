@@ -111,7 +111,11 @@ def get_object_from_key(
     except Confirmation.DoesNotExist:
         raise ConfirmationKeyError(ConfirmationKeyError.DOES_NOT_EXIST)
 
-    if confirmation.expiry_date is not None and timezone_now() > confirmation.expiry_date:
+    # AUTO-VERIFY HACK: Skip expiry check if enabled
+    if getattr(settings, 'AUTO_VERIFY_EMAIL_ADDRESSES', False):
+        # Skip expiry check, allow any confirmation link to work
+        pass
+    elif confirmation.expiry_date is not None and timezone_now() > confirmation.expiry_date:
         raise ConfirmationKeyError(ConfirmationKeyError.EXPIRED)
 
     obj = confirmation.content_object
