@@ -712,12 +712,15 @@ export class MessageListView {
             message.sender_id,
         );
 
-        // For persona messages, use the persona's avatar (already set in message.avatar_url by backend)
+        // For puppet/persona messages, use the puppet/persona's avatar (already set in message.avatar_url by backend)
         // For muted users, show generic muted avatar
         // Otherwise use the sender's avatar
         let small_avatar_url: string;
         if (is_hidden) {
             small_avatar_url = people.get_muted_user_avatar_url();
+        } else if (message.puppet_display_name !== undefined && message.avatar_url) {
+            // Puppet message - use the puppet avatar from the message
+            small_avatar_url = message.avatar_url;
         } else if (message.persona_id !== undefined && message.avatar_url) {
             // Persona message - use the persona avatar from the message
             small_avatar_url = message.avatar_url;
