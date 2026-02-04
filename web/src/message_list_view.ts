@@ -693,6 +693,15 @@ export class MessageListView {
         const sender_is_guest = people.sender_is_guest(message);
         const sender_is_deactivated = people.sender_is_deactivated(message);
         const sender = people.get_by_user_id(message.sender_id);
+        // DEBUG: Log puppet message data
+        if (message.puppet_display_name) {
+            console.log(`[PUPPET DEBUG] Message ${message.id}:`, {
+                sender_full_name: message.sender_full_name,
+                puppet_display_name: message.puppet_display_name,
+                puppet_color: message.puppet_color,
+                real_sender: sender?.full_name,
+            });
+        }
         // Use puppet/persona color if available, otherwise use effective_color (considers group memberships), fall back to personal color
         const sender_color =
             message.puppet_color ??
